@@ -299,10 +299,11 @@ else:
         app.mount("/downloads", StaticFiles(directory=str(PUBLIC_DOWNLOADS_DIR)), name="dev-downloads")
 
     @app.get("/", include_in_schema=False, response_model=None)
-    def frontend_unavailable():
+    @app.get("/{full_path:path}", include_in_schema=False, response_model=None)
+    def frontend_unavailable(full_path: str = ""):
         return JSONResponse(
-            {"message": "Frontend React non build. Lance `npm run dev` pour l'interface."},
-            status_code=200,
+            {"message": "L'interface React n'a pas été construite sur le serveur. Sur Render, assurez-vous que le champ 'Build Command' est bien './build.sh' (et non pip install...). Le déploiement est peut-être encore en cours !"},
+            status_code=503,
         )
 
 
