@@ -1,0 +1,12 @@
+node_modules/
+frontend-dist/
+dist/
+.venv/
+venv/
+env/
+data/
+public/downloads/
+.env
+.models/
+.tmp/
+__pycache__/
