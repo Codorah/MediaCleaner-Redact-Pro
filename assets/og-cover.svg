@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#08141f"/>
+      <stop offset="100%" stop-color="#102233"/>
+    </linearGradient>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#80e7c5"/>
+      <stop offset="100%" stop-color="#3cc5ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="920" cy="120" r="160" fill="#ffc96b" opacity="0.12"/>
+  <circle cx="220" cy="80" r="180" fill="#80e7c5" opacity="0.12"/>
+  <rect x="90" y="104" width="170" height="170" rx="42" fill="url(#g)"/>
+  <path d="M138 220V156h18l32 36v-36h18v64h-18l-32-34v34z" fill="#042436"/>
+  <path d="M214 156h22c18 0 30 9 30 23 0 11-7 19-18 22l24 19h-24l-19-16h-5v16h-19zm22 32c7 0 11-3 11-9 0-5-4-8-11-8h-12v17z" fill="#042436"/>
+  <text x="90" y="370" fill="#eff7fb" font-size="72" font-family="Space Grotesk, Arial, sans-serif" font-weight="700">
+    MediaCleaner Redact Pro
+  </text>
+  <text x="90" y="440" fill="#a4bccb" font-size="32" font-family="Manrope, Arial, sans-serif">
+    Redaction de texte sur images, PDF, PPTX et documents sensibles
+  </text>
+  <rect x="90" y="490" width="470" height="56" rx="28" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.12)"/>
+  <text x="122" y="527" fill="#80e7c5" font-size="24" font-family="Manrope, Arial, sans-serif">
+    Landing page premium + PWA + base SEO prete a publier
+  </text>
+</svg>

@@ -1,0 +1,12 @@
+customtkinter
+Pillow
+opencv-python
+easyocr
+PyMuPDF
+python-pptx
+numpy
+imageio-ffmpeg
+pyinstaller
+fastapi
+uvicorn
+python-multipart

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MediaCleaner Redact Pro | Wizard privacy web + desktop</title>
+  <meta name="description"
+    content="Wizard dark tech pour supprimer texte visible, nettoyer les metadonnees et reduire la taille des fichiers sur web et desktop.">
+  <meta name="theme-color" content="#08141f">
+  <link rel="icon" type="image/png" href="/assets/favicon.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap"
+    rel="stylesheet">
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').then(
+          (registration) => { console.log('ServiceWorker registration successful with scope: ', registration.scope); },
+          (err) => { console.log('ServiceWorker registration failed: ', err); }
+        );
+      });
+    }
+  </script>
+</body>
+
+</html>

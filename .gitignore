@@ -1,0 +1,10 @@
+node_modules
+dist
+frontend-dist
+.venv
+venv
+env
+data
+public/downloads/*.zip
+public/downloads/*.exe
+.env
