@@ -8,3 +8,4 @@ data
 public/downloads/*.zip
 public/downloads/*.exe
 .env
+.vercel
