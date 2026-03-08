@@ -55,7 +55,8 @@ export default function RedactTab() {
                 formData.append(key, String(value));
             });
 
-            const response = await fetch("/api/process", {
+            const API_URL = import.meta.env.VITE_API_URL || "";
+            const response = await fetch(`${API_URL}/api/process`, {
                 method: "POST",
                 body: formData
             });
