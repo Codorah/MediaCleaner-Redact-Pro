@@ -20,11 +20,14 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy backend files
-COPY . .
+# Create a non-root user (required by Hugging Face)
+RUN useradd -m -u 1000 user
+USER user
+ENV PATH="/home/user/.local/bin:$PATH"
 
-# Copy built frontend from previous stage
-COPY --from=frontend-build /app/frontend-dist ./frontend-dist
+# Copy backend files and built frontend
+COPY --chown=user . .
+COPY --chown=user --from=frontend-build /app/frontend-dist ./frontend-dist
 
 # Create necessary directories
 RUN mkdir -p /app/data /app/.models /app/.tmp
