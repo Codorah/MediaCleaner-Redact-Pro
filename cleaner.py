@@ -283,14 +283,39 @@ def recompress_embedded_image(image_path: Path, options: ProcessingOptions) -> b
         return False
 
     original_size = image_path.stat().st_size
-    with Image.open(image_path) as source_image:
-        normalized = ImageOps.exif_transpose(source_image).convert("RGB")
-        max_width = options.document_image_max_width if options.compress_output else normalized.width
-        normalized = resize_image_if_needed(normalized, max_width)
-        temp_path = image_path.with_suffix(f"{image_path.suffix}.tmp")
-        save_image_without_metadata(normalized, temp_path, options)
-    temp_path.replace(image_path)
-    return image_path.stat().st_size < original_size
+    try:
+        with Image.open(image_path) as source_image:
+            # Preserve alpha channel for PNG/WebP if present
+            if source_image.mode in ("RGBA", "LA") or (source_image.mode == "P" and "transparency" in source_image.info):
+                # Keep as PNG if it has transparency to avoid black backgrounds
+                target_mode = "RGBA"
+                fmt = "PNG"
+            else:
+                target_mode = "RGB"
+                fmt = "JPEG" if suffix in {".jpg", ".jpeg"} else "PNG"
+
+            normalized = ImageOps.exif_transpose(source_image).convert(target_mode)
+            max_width = options.document_image_max_width if options.compress_output else normalized.width
+            normalized = resize_image_if_needed(normalized, max_width)
+
+            temp_path = image_path.with_suffix(f"{image_path.suffix}.tmp")
+            
+            save_kwargs: dict[str, object] = {"optimize": True}
+            if fmt == "JPEG":
+                save_kwargs["quality"] = options.image_quality if options.compress_output else 95
+            elif fmt == "PNG":
+                save_kwargs["compress_level"] = 9 if options.compress_output else 3
+            
+            normalized.save(temp_path, format=fmt, **save_kwargs)
+            
+        if temp_path.stat().st_size < original_size:
+            temp_path.replace(image_path)
+            return True
+        else:
+            temp_path.unlink()
+            return False
+    except Exception:
+        return False
 
 
 def rebuild_zip_from_folder(source_dir: Path, output_path: Path) -> None:
@@ -340,6 +365,11 @@ def clean_pptx(
 
         report(progress_callback, "Reconstruction du PowerPoint")
         rebuild_zip_from_folder(extracted_dir, Path(output_path))
+        
+        # Check if re-zipped file is actually smaller than the staged one
+        if output_path.exists() and output_path.stat().st_size > staged_pptx.stat().st_size:
+            shutil.copyfile(staged_pptx, output_path)
+            
         return warnings
     finally:
         shutil.rmtree(work_dir, ignore_errors=True)

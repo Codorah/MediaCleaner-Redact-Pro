@@ -140,6 +140,15 @@ def health() -> JSONResponse:
     return JSONResponse({"status": "ok"})
 
 
+@app.get("/api/version")
+def get_version() -> JSONResponse:
+    return JSONResponse({
+        "version": "2.0.0",
+        "stable": True,
+        "download_url": "https://ton-app.vercel.app/downloads"
+    })
+
+
 @app.get("/api/jobs")
 def recent_jobs(limit: int = 8) -> JSONResponse:
     with db_connection() as connection:
