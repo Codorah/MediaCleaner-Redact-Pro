@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import DragDropZone from "../components/DragDropZone";
 import OptionsPanel from "../components/OptionsPanel";
@@ -11,6 +11,27 @@ const initialOptions = {
     compress_output: true,
     redact_visible_text: false,
     remove_audio: false
+};
+
+const presetOptions = {
+    low: {
+        strip_metadata: true,
+        compress_output: false,
+        redact_visible_text: false,
+        remove_audio: false
+    },
+    medium: {
+        strip_metadata: true,
+        compress_output: true,
+        redact_visible_text: false,
+        remove_audio: false
+    },
+    high: {
+        strip_metadata: true,
+        compress_output: true,
+        redact_visible_text: true,
+        remove_audio: true
+    }
 };
 
 const steps = [
@@ -30,11 +51,17 @@ export default function RedactTab() {
     const [stepIndex, setStepIndex] = useState(0);
     const [file, setFile] = useState(null);
     const [preset, setPreset] = useState("medium");
-    const [options, setOptions] = useState(initialOptions);
+    const [options, setOptions] = useState(presetOptions.medium);
     const [status, setStatus] = useState("Pret.");
     const [progress, setProgress] = useState(0);
     const [result, setResult] = useState(null);
     const [downloadState, setDownloadState] = useState({ url: "", filename: "" });
+
+    useEffect(() => {
+        if (preset !== "custom") {
+            setOptions(presetOptions[preset] || initialOptions);
+        }
+    }, [preset]);
 
     async function startProcessing() {
         if (!file) return;
@@ -126,6 +153,26 @@ export default function RedactTab() {
         setResult(null);
         setProgress(0);
         setStatus("Pret.");
+        setPreset("medium");
+        setOptions(presetOptions.medium);
+    };
+
+    const handleOptionToggle = (key) => {
+        setOptions((current) => {
+            const nextOptions = { ...current, [key]: !current[key] };
+            const matchedPreset = Object.entries(presetOptions).find(([, presetValue]) =>
+                Object.keys(presetValue).every((optionKey) => presetValue[optionKey] === nextOptions[optionKey])
+            );
+            setPreset(matchedPreset ? matchedPreset[0] : "custom");
+            return nextOptions;
+        });
+    };
+
+    const handlePresetChange = (nextPreset) => {
+        setPreset(nextPreset);
+        if (nextPreset !== "custom") {
+            setOptions(presetOptions[nextPreset]);
+        }
     };
 
     const nextLabel = stepIndex === 0 ? "Options" : stepIndex === 1 ? "Nettoyer" : stepIndex === 2 ? "..." : "Nouveau fichier";
@@ -139,7 +186,15 @@ export default function RedactTab() {
             <div className="flex-1 w-full max-w-4xl mx-auto flex flex-col justify-center">
                 <AnimatePresence mode="wait">
                     {stepIndex === 0 && <DragDropZone key="upload" selectedFile={file} onFileSelect={setFile} />}
-                    {stepIndex === 1 && <OptionsPanel key="options" options={options} setOptions={setOptions} preset={preset} setPreset={setPreset} />}
+                    {stepIndex === 1 && (
+                        <OptionsPanel
+                            key="options"
+                            options={options}
+                            preset={preset}
+                            onPresetChange={handlePresetChange}
+                            onOptionToggle={handleOptionToggle}
+                        />
+                    )}
                     {stepIndex === 2 && <ProcessingAnimation key="process" progress={progress} status={status} />}
                     {stepIndex === 3 && <ResultCard key="result" result={result} onDownload={handleDownload} onReset={handleReset} />}
                 </AnimatePresence>

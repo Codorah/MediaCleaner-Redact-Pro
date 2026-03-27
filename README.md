@@ -59,7 +59,12 @@ Le build React sort dans `frontend-dist/`. Si ce dossier existe, `server.py` peu
 
 ## Telechargement desktop
 
-Si tu veux afficher un bouton de telechargement `.exe` dans le site:
+Si tu veux afficher un bouton de telechargement desktop dans le site, tu as deux options:
+
+1. deposer un `.zip` ou un `.exe` dans `public/downloads/`
+2. ou configurer une URL externe via `DESKTOP_DOWNLOAD_EXTERNAL_URL`
+
+### Option 1: fichier local servi par l'application
 
 1. depose ton fichier dans `public/downloads/`
 2. rebuild le frontend avec `npm run build`
@@ -70,7 +75,19 @@ Exemple attendu:
 public/downloads/MediaCleaner_Redact_Pro.exe
 ```
 
-Le site detectera automatiquement le `.exe` et activera la section de telechargement desktop.
+Le site detectera automatiquement le `.exe` ou le `.zip` et activera la section de telechargement desktop.
+
+### Option 2: lien externe vers le binaire
+
+Configure les variables suivantes sur ton hebergeur:
+
+```text
+DESKTOP_DOWNLOAD_EXTERNAL_URL=https://.../MediaCleaner_Redact_Pro.exe
+DESKTOP_DOWNLOAD_FILENAME=MediaCleaner_Redact_Pro.exe
+DESKTOP_DOWNLOAD_NOTE=Telechargement officiel de la version desktop.
+```
+
+Cette approche est recommandee si tu veux pointer vers GitHub Releases ou un stockage de fichiers dedie.
 
 ## API utile
 
@@ -84,3 +101,4 @@ Le site detectera automatiquement le `.exe` et activera la section de telecharge
 - Les modeles OCR sont stockes dans `.models/`.
 - Le mode `Masquer le texte visible` est plus lent.
 - Sur `.pptx`, le backend optimise les medias embarques et nettoie les metadonnees, mais ne vide plus les slides.
+- Le backend applique des limites d'upload, des en-tetes de securite, une validation MIME de base, un controle d'hote et un rate limiting simple sur les routes sensibles.

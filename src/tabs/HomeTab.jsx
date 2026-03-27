@@ -1,8 +1,62 @@
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import ThreeDFileIcon from '../components/3DFileIcon';
-import { ArrowRight, Download, ShieldCheck, Zap, FileJson, Clock, ServerOff } from 'lucide-react';
+import { ArrowRight, Download, ShieldCheck, Zap, FileJson, Clock, ServerOff, MonitorDown, LockKeyhole } from 'lucide-react';
+
+function formatBytes(bytes) {
+    if (!bytes) return "";
+    const units = ["B", "KB", "MB", "GB"];
+    let size = bytes;
+    let index = 0;
+    while (size >= 1024 && index < units.length - 1) {
+        size /= 1024;
+        index += 1;
+    }
+    return `${size.toFixed(1)} ${units[index]}`;
+}
 
 export default function HomeTab({ onStart }) {
+    const [desktopDownload, setDesktopDownload] = useState({
+        available: false,
+        filename: "",
+        url: "",
+        size_bytes: 0,
+        note: "Verification du telechargement desktop...",
+        external: false
+    });
+
+    useEffect(() => {
+        let active = true;
+
+        async function loadDesktopDownload() {
+            try {
+                const apiUrl = import.meta.env.VITE_API_URL || "";
+                const response = await fetch(`${apiUrl}/api/downloads`);
+                if (!response.ok) throw new Error("Impossible de verifier la version desktop.");
+                const payload = await response.json();
+                if (active) {
+                    setDesktopDownload(payload);
+                }
+            } catch {
+                if (active) {
+                    setDesktopDownload({
+                        available: false,
+                        filename: "",
+                        url: "",
+                        size_bytes: 0,
+                        note: "La version desktop n'est pas encore configuree sur cette instance.",
+                        external: false
+                    });
+                }
+            }
+        }
+
+        loadDesktopDownload();
+        return () => {
+            active = false;
+        };
+    }, []);
+
     return (
         <div className="w-full flex flex-col gap-24">
             <motion.section
@@ -36,7 +90,12 @@ export default function HomeTab({ onStart }) {
                             <ArrowRight className="relative z-10 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                         </button>
 
-                        <a href="/api/downloads/file" className="px-8 py-4 glass-panel rounded-2xl font-bold flex items-center gap-3 hover:bg-white/5 transition-colors">
+                        <a
+                            href={desktopDownload.available ? desktopDownload.url || "/api/downloads/file" : "#desktop-download"}
+                            target={desktopDownload.external ? "_blank" : undefined}
+                            rel={desktopDownload.external ? "noreferrer" : undefined}
+                            className="px-8 py-4 glass-panel rounded-2xl font-bold flex items-center gap-3 hover:bg-white/5 transition-colors"
+                        >
                             <Download className="w-5 h-5 text-accent" />
                             <span className="text-gray-200">Version desktop</span>
                         </a>
@@ -46,6 +105,67 @@ export default function HomeTab({ onStart }) {
                 <div className="flex-1 w-full lg:max-w-md relative">
                     <div className="absolute inset-0 bg-accent/20 blur-[100px] rounded-full mix-blend-screen" />
                     <ThreeDFileIcon className="w-full h-[400px] md:h-[500px] relative z-10" />
+                </div>
+            </motion.section>
+
+            <motion.section
+                id="desktop-download"
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true }}
+                className="glass-panel p-8 md:p-10 rounded-3xl border border-white/10 relative overflow-hidden"
+            >
+                <div className="absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-primary/10 to-transparent pointer-events-none" />
+                <div className="flex flex-col lg:flex-row gap-8 lg:items-center lg:justify-between">
+                    <div className="max-w-2xl space-y-4">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-semibold uppercase tracking-[0.2em] text-gray-300">
+                            <MonitorDown className="w-4 h-4 text-accent" />
+                            Application desktop
+                        </div>
+                        <h2 className="text-3xl font-display font-bold text-white">Telechargement de l'application bureau</h2>
+                        <p className="text-gray-300 leading-relaxed">
+                            Cette section sert de point d'entree unique pour le binaire Windows. Tu peux soit
+                            deposer un `.zip` ou un `.exe` dans `public/downloads/`, soit configurer une URL externe
+                            via `DESKTOP_DOWNLOAD_EXTERNAL_URL` si tu preferes un lien vers GitHub Releases ou un autre stockage.
+                        </p>
+                        <p className="text-sm text-gray-400">{desktopDownload.note}</p>
+                        {desktopDownload.filename && (
+                            <p className="text-sm text-gray-400">
+                                Fichier detecte: <span className="text-white font-medium">{desktopDownload.filename}</span>
+                                {desktopDownload.size_bytes ? ` · ${formatBytes(desktopDownload.size_bytes)}` : ""}
+                            </p>
+                        )}
+                    </div>
+
+                    <div className="w-full lg:max-w-sm">
+                        <div className="rounded-3xl border border-white/10 bg-black/20 p-6 space-y-4">
+                            <div className="flex items-start gap-3">
+                                <LockKeyhole className="w-5 h-5 text-primary mt-1" />
+                                <div>
+                                    <p className="text-white font-semibold">Distribution controlee</p>
+                                    <p className="text-sm text-gray-400">
+                                        Le site ne sert que ce que tu configures explicitement. Aucun binaire n'est expose tant qu'il n'est pas fourni.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {desktopDownload.available ? (
+                                <a
+                                    href={desktopDownload.url || "/api/downloads/file"}
+                                    target={desktopDownload.external ? "_blank" : undefined}
+                                    rel={desktopDownload.external ? "noreferrer" : undefined}
+                                    className="w-full inline-flex justify-center items-center gap-2 rounded-2xl bg-primary px-5 py-4 font-bold text-white shadow-lg shadow-primary/20 hover:scale-[1.01] transition-transform"
+                                >
+                                    <Download className="w-5 h-5" />
+                                    Telecharger la version desktop
+                                </a>
+                            ) : (
+                                <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-4 text-sm text-amber-100">
+                                    La version desktop n'est pas encore branchee a cette instance.
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </motion.section>
 

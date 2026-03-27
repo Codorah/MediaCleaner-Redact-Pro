@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import asyncio
 import os
 import shutil
 import sqlite3
+import time
+from collections import defaultdict, deque
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -23,8 +27,53 @@ CHUNK_SIZE = 1024 * 1024
 MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(100 * 1024 * 1024)))
 PUBLIC_HISTORY_ENABLED = os.getenv("ENABLE_PUBLIC_HISTORY", "false").lower() in {"1", "true", "yes", "on"}
 DOWNLOAD_URL = os.getenv("PUBLIC_DOWNLOAD_URL", "/api/downloads/file")
+DESKTOP_DOWNLOAD_EXTERNAL_URL = os.getenv("DESKTOP_DOWNLOAD_EXTERNAL_URL", "").strip()
+DESKTOP_DOWNLOAD_FILENAME = os.getenv("DESKTOP_DOWNLOAD_FILENAME", "").strip()
+DESKTOP_DOWNLOAD_NOTE = os.getenv("DESKTOP_DOWNLOAD_NOTE", "").strip()
 DEFAULT_ALLOWED_ORIGINS = "http://127.0.0.1:5173,http://localhost:5173"
 ALLOWED_ORIGINS = [origin.strip() for origin in os.getenv("ALLOWED_ORIGINS", DEFAULT_ALLOWED_ORIGINS).split(",") if origin.strip()]
+DEFAULT_ALLOWED_HOSTS = "127.0.0.1,localhost,testserver,.onrender.com"
+ALLOWED_HOSTS = [host.strip() for host in os.getenv("ALLOWED_HOSTS", DEFAULT_ALLOWED_HOSTS).split(",") if host.strip()]
+MAX_CONCURRENT_JOBS = max(1, int(os.getenv("MAX_CONCURRENT_JOBS", "2")))
+PROCESSING_SEMAPHORE = asyncio.Semaphore(MAX_CONCURRENT_JOBS)
+RATE_LIMIT_WINDOW_SECONDS = max(10, int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "300")))
+RATE_LIMIT_PROCESS_REQUESTS = max(1, int(os.getenv("RATE_LIMIT_PROCESS_REQUESTS", "12")))
+RATE_LIMIT_DOWNLOAD_REQUESTS = max(1, int(os.getenv("RATE_LIMIT_DOWNLOAD_REQUESTS", "40")))
+RATE_LIMIT_BUCKETS: dict[str, deque[float]] = defaultdict(deque)
+DEFAULT_CSP = (
+    "default-src 'self'; "
+    "img-src 'self' data: blob:; "
+    "style-src 'self' 'unsafe-inline'; "
+    "script-src 'self'; "
+    "connect-src 'self'; "
+    "font-src 'self' data:; "
+    "frame-ancestors 'none'; "
+    "base-uri 'self'; "
+    "form-action 'self'"
+)
+ALLOWED_CONTENT_TYPES = {
+    ".txt": {"text/plain", "application/octet-stream"},
+    ".csv": {"text/csv", "text/plain", "application/vnd.ms-excel", "application/octet-stream"},
+    ".md": {"text/markdown", "text/plain", "application/octet-stream"},
+    ".json": {"application/json", "text/plain", "application/octet-stream"},
+    ".xml": {"application/xml", "text/xml", "text/plain", "application/octet-stream"},
+    ".html": {"text/html", "text/plain", "application/octet-stream"},
+    ".rtf": {"application/rtf", "text/rtf", "application/octet-stream"},
+    ".jpg": {"image/jpeg", "application/octet-stream"},
+    ".jpeg": {"image/jpeg", "application/octet-stream"},
+    ".png": {"image/png", "application/octet-stream"},
+    ".bmp": {"image/bmp", "application/octet-stream"},
+    ".webp": {"image/webp", "application/octet-stream"},
+    ".tif": {"image/tiff", "application/octet-stream"},
+    ".tiff": {"image/tiff", "application/octet-stream"},
+    ".pdf": {"application/pdf", "application/octet-stream"},
+    ".pptx": {"application/vnd.openxmlformats-officedocument.presentationml.presentation", "application/octet-stream"},
+    ".mp4": {"video/mp4", "application/octet-stream"},
+    ".mov": {"video/quicktime", "application/octet-stream"},
+    ".avi": {"video/x-msvideo", "application/octet-stream"},
+    ".mkv": {"video/x-matroska", "application/octet-stream"},
+    ".webm": {"video/webm", "application/octet-stream"},
+}
 
 app = FastAPI(
     title="MediaCleaner Redact Pro",
@@ -39,6 +88,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS or ["127.0.0.1", "localhost", ".onrender.com"])
 
 
 def db_connection() -> sqlite3.Connection:
@@ -129,6 +179,29 @@ def cleanup_directory(path: Path) -> None:
     shutil.rmtree(path, ignore_errors=True)
 
 
+def client_ip(request: Request) -> str:
+    forwarded_for = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+    if forwarded_for:
+        return forwarded_for
+    if request.client and request.client.host:
+        return request.client.host
+    return "unknown"
+
+
+def enforce_rate_limit(request: Request, action: str, limit: int) -> None:
+    key = f"{action}:{client_ip(request)}"
+    now = time.monotonic()
+    bucket = RATE_LIMIT_BUCKETS[key]
+    while bucket and now - bucket[0] > RATE_LIMIT_WINDOW_SECONDS:
+        bucket.popleft()
+    if len(bucket) >= limit:
+        raise HTTPException(
+            status_code=429,
+            detail="Trop de requetes sur une courte periode. Merci de reessayer un peu plus tard.",
+        )
+    bucket.append(now)
+
+
 def client_safe_error(exc: Exception) -> str:
     lowered = str(exc).lower()
     if "memory" in lowered or "allocator" in lowered:
@@ -154,9 +227,55 @@ def get_desktop_exe() -> Path | None:
     return exe_files[0] if exe_files else None
 
 
+def desktop_download_payload() -> dict[str, object]:
+    if DESKTOP_DOWNLOAD_EXTERNAL_URL:
+        return {
+            "available": True,
+            "filename": DESKTOP_DOWNLOAD_FILENAME or Path(DESKTOP_DOWNLOAD_EXTERNAL_URL).name or "MediaCleaner-Desktop",
+            "url": DESKTOP_DOWNLOAD_EXTERNAL_URL,
+            "size_bytes": 0,
+            "note": DESKTOP_DOWNLOAD_NOTE or "Telechargement desktop disponible.",
+            "external": True,
+        }
+
+    file_path = get_desktop_exe()
+    if file_path is not None:
+        return {
+            "available": True,
+            "filename": file_path.name,
+            "url": "/api/downloads/file",
+            "size_bytes": file_path.stat().st_size,
+            "note": DESKTOP_DOWNLOAD_NOTE or "Telechargement direct actif pour la version desktop.",
+            "external": False,
+        }
+
+    return {
+        "available": False,
+        "filename": "",
+        "url": "",
+        "size_bytes": 0,
+        "note": "Aucun .zip ou .exe n'est encore depose dans public/downloads et aucune URL externe n'est configuree.",
+        "external": False,
+    }
+
+
 @app.on_event("startup")
 def on_startup() -> None:
     init_db()
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()"
+    response.headers["Content-Security-Policy"] = os.getenv("CONTENT_SECURITY_POLICY", DEFAULT_CSP)
+    if request.url.scheme == "https":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
+    return response
 
 
 @app.get("/api/health")
@@ -211,31 +330,14 @@ def recent_jobs(limit: int = 8) -> JSONResponse:
 
 @app.get("/api/downloads")
 def desktop_download() -> JSONResponse:
-    file_path = get_desktop_exe()
-    if file_path is not None:
-        return JSONResponse(
-            {
-                "available": True,
-                "filename": file_path.name,
-                "url": "/api/downloads/file",
-                "size_bytes": file_path.stat().st_size,
-                "note": "Telechargement direct actif pour la version desktop.",
-            }
-        )
-
-    return JSONResponse(
-        {
-            "available": False,
-            "filename": "",
-            "url": "",
-            "size_bytes": 0,
-            "note": "Aucun .zip ou .exe n'est encore depose dans public/downloads.",
-        }
-    )
+    return JSONResponse(desktop_download_payload())
 
 
 @app.get("/api/downloads/file", response_model=None)
-def desktop_download_file():
+def desktop_download_file(request: Request):
+    enforce_rate_limit(request, "downloads", RATE_LIMIT_DOWNLOAD_REQUESTS)
+    if DESKTOP_DOWNLOAD_EXTERNAL_URL:
+        raise HTTPException(status_code=404, detail="Le telechargement desktop est configure via une URL externe.")
     file_path = get_desktop_exe()
     if file_path is None:
         raise HTTPException(status_code=404, detail="Aucun .exe disponible pour le telechargement.")
@@ -248,6 +350,7 @@ def desktop_download_file():
 
 @app.post("/api/process")
 async def process_file(
+    request: Request,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     strip_metadata: str = Form("true"),
@@ -255,6 +358,8 @@ async def process_file(
     redact_visible_text: str = Form("false"),
     remove_audio: str = Form("false"),
 ) -> FileResponse:
+    enforce_rate_limit(request, "process", RATE_LIMIT_PROCESS_REQUESTS)
+
     if not file.filename:
         raise HTTPException(status_code=400, detail="Nom de fichier manquant.")
 
@@ -266,6 +371,10 @@ async def process_file(
     if upload_suffix not in SUPPORTED_EXTENSIONS:
         cleanup_directory(request_dir)
         raise HTTPException(status_code=400, detail="Format non supporte.")
+    allowed_content_types = ALLOWED_CONTENT_TYPES.get(upload_suffix, {"application/octet-stream"})
+    if file.content_type and file.content_type not in allowed_content_types:
+        cleanup_directory(request_dir)
+        raise HTTPException(status_code=400, detail="Type MIME non autorise pour cette extension.")
 
     upload_path = request_dir / upload_name
     job_id: int | None = None
@@ -294,12 +403,13 @@ async def process_file(
 
         job_id = log_job_start(upload_name, options, total_bytes)
 
-        result = clean_file(
-            str(upload_path),
-            options=options,
-            output_dir=request_dir,
-            prefix="CLEANED",
-        )
+        async with PROCESSING_SEMAPHORE:
+            result = clean_file(
+                str(upload_path),
+                options=options,
+                output_dir=request_dir,
+                prefix="CLEANED",
+            )
         log_job_success(job_id, result.output_bytes, result.reduction_percent)
     except CleanerError as exc:
         log_job_failure(job_id, str(exc))

@@ -1,15 +1,18 @@
 import { motion } from "framer-motion";
 import { Shield, EyeOff, FileText, VolumeX, CheckSquare } from "lucide-react";
 
-export default function OptionsPanel({ options, setOptions, preset, setPreset }) {
-    const handleToggle = (key) => {
-        setOptions((prev) => ({ ...prev, [key]: !prev[key] }));
-    };
+const presetLabels = {
+    low: "Low",
+    medium: "Medium",
+    high: "High",
+    custom: "Custom"
+};
 
+export default function OptionsPanel({ options, preset, onPresetChange, onOptionToggle }) {
     const OptionItem = ({ icon: Icon, title, description, id, checked }) => (
         <button
             type="button"
-            onClick={() => handleToggle(id)}
+            onClick={() => onOptionToggle(id)}
             className={`glass-panel p-4 rounded-2xl flex items-start gap-4 cursor-pointer transition-all border-2 text-left ${checked ? 'border-primary bg-primary/10' : 'border-white/10 hover:border-white/30'}`}
         >
             <div className={`p-3 rounded-xl ${checked ? 'bg-primary text-white' : 'bg-white/5 text-gray-400'}`}>
@@ -39,15 +42,22 @@ export default function OptionsPanel({ options, setOptions, preset, setPreset })
             </div>
 
             <div className="flex gap-4 mb-8 justify-center flex-wrap">
-                {['light', 'medium', 'heavy', 'custom'].map((currentPreset) => (
+                {['low', 'medium', 'high', 'custom'].map((currentPreset) => (
                     <button
                         key={currentPreset}
-                        onClick={() => setPreset(currentPreset)}
+                        onClick={() => onPresetChange(currentPreset)}
                         className={`px-4 py-2 rounded-xl text-sm font-bold capitalize transition-all border ${preset === currentPreset ? 'bg-primary border-primary text-white scale-105' : 'bg-white/5 border-white/10 text-gray-400 hover:text-white'}`}
                     >
-                        {currentPreset}
+                        {presetLabels[currentPreset]}
                     </button>
                 ))}
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-gray-300">
+                {preset === "low" && "Preset Low: purge des metadonnees uniquement pour aller vite."}
+                {preset === "medium" && "Preset Medium: purge des metadonnees et compression activees."}
+                {preset === "high" && "Preset High: protection maximale avec compression, OCR et suppression audio."}
+                {preset === "custom" && "Preset Custom: configuration manuelle, tu choisis chaque option."}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
