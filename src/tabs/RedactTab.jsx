@@ -38,7 +38,7 @@ const steps = [
   { id: "upload", label: "Fichier" },
   { id: "options", label: "Options" },
   { id: "process", label: "Traitement" },
-  { id: "result", label: "Resultat" },
+  { id: "result", label: "Résultat" },
 ];
 
 function getFilenameFromDisposition(disposition) {
@@ -52,7 +52,7 @@ export default function RedactTab({ historyEnabled, onAddHistoryEntry }) {
   const [file, setFile] = useState(null);
   const [preset, setPreset] = useState("medium");
   const [options, setOptions] = useState(presetOptions.medium);
-  const [status, setStatus] = useState("Pret.");
+  const [status, setStatus] = useState("Prêt.");
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState(null);
   const [downloadState, setDownloadState] = useState({ url: "", filename: "" });
@@ -116,7 +116,7 @@ export default function RedactTab({ historyEnabled, onAddHistoryEntry }) {
       setDownloadState({ url: downloadUrl, filename });
       setResult(nextResult);
       setProgress(100);
-      setStatus("Termine.");
+      setStatus("Terminé.");
 
       if (historyEnabled && onAddHistoryEntry) {
         onAddHistoryEntry({
@@ -166,7 +166,7 @@ export default function RedactTab({ historyEnabled, onAddHistoryEntry }) {
     setFile(null);
     setResult(null);
     setProgress(0);
-    setStatus("Pret.");
+    setStatus("Prêt.");
     setPreset("medium");
     setOptions(presetOptions.medium);
   };

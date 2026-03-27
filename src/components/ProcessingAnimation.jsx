@@ -15,7 +15,7 @@ export default function ProcessingAnimation({ progress, status }) {
       </div>
 
       <div className="glass-panel glass-panel-solid w-full p-6 rounded-[1.75rem] relative overflow-hidden">
-        <div className="absolute inset-0 opacity-50 pointer-events-none bg-[radial-gradient(circle_at_top_left,rgba(255,59,92,0.14),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(0,217,160,0.12),transparent_30%)]" />
+        <div className="absolute inset-0 opacity-50 pointer-events-none bg-[radial-gradient(circle_at_top_left,rgba(36,107,255,0.12),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(20,184,166,0.12),transparent_30%)]" />
         <div className="flex justify-between items-end mb-4 relative z-10">
           <div>
             <p className="cp-label mb-2">Traitement en cours</p>

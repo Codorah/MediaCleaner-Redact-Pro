@@ -22,8 +22,8 @@ export default function Stepper({ steps, currentStep }) {
             <motion.div
               initial={false}
               animate={{
-                backgroundColor: isActive || isPast ? "#ff3b5c" : "var(--app-surface-strong)",
-                borderColor: isActive || isPast ? "#ff3b5c" : "var(--app-border-strong)",
+                backgroundColor: isActive || isPast ? "#246bff" : "var(--app-surface-strong)",
+                borderColor: isActive || isPast ? "#246bff" : "var(--app-border-strong)",
                 color: isActive || isPast ? "#ffffff" : "var(--text-muted)",
                 scale: isActive ? 1.16 : 1,
               }}

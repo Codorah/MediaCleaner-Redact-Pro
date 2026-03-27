@@ -58,7 +58,7 @@ export default function DragDropZone({ onFileSelect, selectedFile }) {
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: isDragActive ? "radial-gradient(circle at center, rgba(255,59,92,0.12), transparent 60%)" : "transparent",
+          background: isDragActive ? "radial-gradient(circle at center, rgba(36,107,255,0.12), transparent 60%)" : "transparent",
         }}
       />
 
@@ -67,12 +67,12 @@ export default function DragDropZone({ onFileSelect, selectedFile }) {
           <UploadCloud className={clsx("w-10 h-10 transition-colors", isDragActive ? "text-primary" : "cp-muted")} />
         </div>
 
-        <p className="cp-label mb-3">Etape 1</p>
+        <p className="cp-label mb-3">Étape 1</p>
         <h3 className="cp-title text-3xl font-display font-bold mb-3 text-center">
-          {isDragActive ? "Depose le fichier ici" : "Glisse ton fichier ici"}
+          {isDragActive ? "Dépose le fichier ici" : "Glisse ton fichier ici"}
         </h3>
         <p className="cp-muted text-center max-w-xl leading-relaxed">
-          Clique ou depose un document pour lancer le nettoyage. Images, PDF, PPTX, videos et fichiers texte sont pris en charge.
+          Clique ou dépose un document pour lancer le nettoyage. Images, PDF, PPTX, vidéos et fichiers texte sont pris en charge.
         </p>
       </motion.div>
     </div>

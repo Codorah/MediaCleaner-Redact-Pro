@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #ff3b5c;
-  --color-accent: #00d9a0;
+  --color-primary: #246bff;
+  --color-accent: #14b8a6;
   --font-sans: "Aptos", "Segoe UI", "Trebuchet MS", sans-serif;
   --font-display: "Bahnschrift", "Arial Narrow", "Segoe UI", sans-serif;
 }
@@ -22,8 +22,8 @@ html[data-theme="dark"] {
   --input-bg: rgba(255, 255, 255, 0.04);
   --shadow-rgb: 5, 10, 18;
   --grid-line: rgba(255, 255, 255, 0.06);
-  --accent-fade: rgba(255, 59, 92, 0.2);
-  --accent-fade-alt: rgba(0, 217, 160, 0.16);
+  --accent-fade: rgba(36, 107, 255, 0.16);
+  --accent-fade-alt: rgba(20, 184, 166, 0.14);
   --warning-bg: rgba(246, 176, 67, 0.12);
   --warning-border: rgba(246, 176, 67, 0.28);
   --warning-text: #ffd7a0;
@@ -43,8 +43,8 @@ html[data-theme="light"] {
   --input-bg: rgba(17, 34, 51, 0.03);
   --shadow-rgb: 59, 88, 118;
   --grid-line: rgba(16, 33, 48, 0.06);
-  --accent-fade: rgba(255, 59, 92, 0.1);
-  --accent-fade-alt: rgba(0, 180, 132, 0.1);
+  --accent-fade: rgba(36, 107, 255, 0.08);
+  --accent-fade-alt: rgba(20, 184, 166, 0.08);
   --warning-bg: rgba(246, 176, 67, 0.16);
   --warning-border: rgba(217, 138, 0, 0.25);
   --warning-text: #8a5800;
@@ -146,9 +146,9 @@ a {
 }
 
 .cp-accent-panel {
-  border: 1px solid rgba(255, 59, 92, 0.2);
+  border: 1px solid rgba(36, 107, 255, 0.18);
   background:
-    linear-gradient(135deg, rgba(255, 59, 92, 0.12), transparent 60%),
+    linear-gradient(135deg, rgba(36, 107, 255, 0.1), transparent 60%),
     var(--app-surface-strong);
 }
 
@@ -166,8 +166,8 @@ a {
 }
 
 .cp-action-primary {
-  background: linear-gradient(135deg, #ff3b5c, #ff6f4b);
-  box-shadow: 0 18px 45px rgba(255, 59, 92, 0.28);
+  background: linear-gradient(135deg, #246bff, #14b8a6);
+  box-shadow: 0 18px 45px rgba(36, 107, 255, 0.24);
   color: #ffffff;
 }
 
@@ -205,8 +205,8 @@ a {
 
 .cp-input:focus-visible {
   outline: none;
-  border-color: rgba(255, 59, 92, 0.5);
-  box-shadow: 0 0 0 4px rgba(255, 59, 92, 0.14);
+  border-color: rgba(36, 107, 255, 0.45);
+  box-shadow: 0 0 0 4px rgba(36, 107, 255, 0.14);
 }
 
 .cp-nav-button {
@@ -218,12 +218,12 @@ a {
 }
 
 .cp-nav-indicator {
-  background: rgba(255, 59, 92, 0.16);
-  border: 1px solid rgba(255, 59, 92, 0.32);
+  background: rgba(36, 107, 255, 0.14);
+  border: 1px solid rgba(36, 107, 255, 0.28);
 }
 
 .cp-mobile-nav {
-  background: color-mix(in srgb, var(--app-surface-strong) 86%, transparent);
+  background: var(--app-surface-strong);
   border-top: 1px solid var(--app-border);
   backdrop-filter: blur(24px);
 }
@@ -239,11 +239,11 @@ a {
 }
 
 .cp-theme-option.is-active {
-  border-color: rgba(255, 59, 92, 0.38);
+  border-color: rgba(36, 107, 255, 0.3);
   background:
-    linear-gradient(135deg, rgba(255, 59, 92, 0.12), transparent 55%),
+    linear-gradient(135deg, rgba(36, 107, 255, 0.1), transparent 55%),
     var(--app-surface-strong);
-  box-shadow: 0 16px 40px rgba(255, 59, 92, 0.14);
+  box-shadow: 0 16px 40px rgba(36, 107, 255, 0.12);
 }
 
 .cp-theme-option:hover {

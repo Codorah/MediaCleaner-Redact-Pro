@@ -39,7 +39,7 @@ export default function HistoryTab({ historyEnabled, historyItems, onClearHistor
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="cp-pill text-sm">{historyEnabled ? "Enregistrement actif" : "Enregistrement desactive"}</div>
+          <div className="cp-pill text-sm">{historyEnabled ? "Enregistrement actif" : "Enregistrement désactivé"}</div>
           {historyItems.length > 0 && (
             <button onClick={onClearHistory} className="cp-action-ghost">
               <Trash2 className="w-4 h-4" />
@@ -56,9 +56,9 @@ export default function HistoryTab({ historyEnabled, historyItems, onClearHistor
               <div className="cp-icon-shell mb-5">
                 <FileCheck className="w-6 h-6 text-primary" />
               </div>
-              <h3 className="cp-title text-2xl font-display font-bold mb-2">Aucun nettoyage enregistre</h3>
+              <h3 className="cp-title text-2xl font-display font-bold mb-2">Aucun nettoyage enregistré</h3>
               <p className="cp-muted max-w-xl leading-relaxed">
-                Quand l'historique local est actif, chaque fichier traite reste visible uniquement sur cet appareil pour te permettre de retrouver rapidement les operations recentes.
+                Quand l'historique local est actif, chaque fichier traité reste visible uniquement sur cet appareil pour te permettre de retrouver rapidement les opérations récentes.
               </p>
             </div>
           ) : (
@@ -105,11 +105,11 @@ export default function HistoryTab({ historyEnabled, historyItems, onClearHistor
           </div>
 
           <div className="glass-panel glass-panel-solid rounded-[1.6rem] p-6">
-            <p className="cp-label mb-3">Confidentialite</p>
+            <p className="cp-label mb-3">Confidentialité</p>
             <ul className="cp-muted text-sm leading-relaxed space-y-2">
               <li>Les entrees restent sur cet appareil uniquement.</li>
-              <li>Tu peux desactiver l'historique dans l'onglet Infos.</li>
-              <li>Tu peux aussi vider la liste a tout moment.</li>
+              <li>Tu peux désactiver l'historique dans l'onglet Infos.</li>
+              <li>Tu peux aussi vider la liste à tout moment.</li>
             </ul>
           </div>
         </div>

@@ -23,11 +23,11 @@ export default function TabLayout({ children, currentTab, onTabChange, resolvedT
       <header className="hidden sm:flex items-center justify-between w-full max-w-7xl mx-auto px-6 pt-6 relative z-20">
         <div className="glass-panel glass-panel-solid w-full rounded-[28px] px-5 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-[0_18px_30px_rgba(255,59,92,0.25)]">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-[0_18px_30px_rgba(36,107,255,0.22)]">
               <ShieldAlert className="w-6 h-6 text-white" />
             </div>
             <div>
-              <p className="cp-label mb-1">Confidentialite appliquee</p>
+              <p className="cp-label mb-1">Confidentialité appliquée</p>
               <h1 className="font-display font-bold text-xl cp-title">Cleaner Pro</h1>
             </div>
           </div>

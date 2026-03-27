@@ -10,10 +10,10 @@ const presetLabels = {
 };
 
 const presetDescriptions = {
-  low: "Priorite a la rapidite: purge des metadonnees uniquement.",
-  medium: "Equilibre recommande: nettoyage + compression.",
+  low: "Priorité à la rapidité: purge des métadonnées uniquement.",
+  medium: "Équilibre recommandé: nettoyage + compression.",
   high: "Protection maximale: OCR, compression et suppression audio.",
-  custom: "Configuration libre, a ajuster selon ton besoin.",
+  custom: "Configuration libre, à ajuster selon ton besoin.",
 };
 
 export default function OptionsPanel({ options, preset, onPresetChange, onOptionToggle }) {
@@ -23,7 +23,7 @@ export default function OptionsPanel({ options, preset, onPresetChange, onOption
       onClick={() => onOptionToggle(id)}
       className={clsx(
         "glass-panel glass-panel-solid rounded-[1.5rem] p-5 flex items-start gap-4 cursor-pointer transition-all border text-left",
-        checked ? "border-primary/35 shadow-[0_18px_32px_rgba(255,59,92,0.12)]" : "border-[var(--app-border)] hover:border-[var(--app-border-strong)]"
+        checked ? "border-primary/35 shadow-[0_18px_32px_rgba(36,107,255,0.12)]" : "border-[var(--app-border)] hover:border-[var(--app-border-strong)]"
       )}
     >
       <div className={clsx("cp-icon-shell", checked && "border-primary/30 bg-primary/10 text-primary")}>
@@ -47,9 +47,9 @@ export default function OptionsPanel({ options, preset, onPresetChange, onOption
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-4xl mx-auto space-y-6">
       <div className="text-center mb-4">
-        <p className="cp-label mb-3">Etape 2</p>
+        <p className="cp-label mb-3">Étape 2</p>
         <h2 className="cp-title text-4xl font-display font-bold mb-2">Choisis ton niveau de nettoyage</h2>
-        <p className="cp-muted max-w-2xl mx-auto">Les presets te donnent une base immediate, puis tu peux basculer en mode custom si tu veux controler chaque option.</p>
+        <p className="cp-muted max-w-2xl mx-auto">Les presets te donnent une base immédiate, puis tu peux basculer en mode custom si tu veux contrôler chaque option.</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -59,7 +59,7 @@ export default function OptionsPanel({ options, preset, onPresetChange, onOption
             onClick={() => onPresetChange(currentPreset)}
             className={clsx(
               "glass-panel glass-panel-solid rounded-[1.35rem] p-4 text-left border transition-all",
-              preset === currentPreset ? "border-primary/40 shadow-[0_18px_30px_rgba(255,59,92,0.12)]" : "border-[var(--app-border)]"
+              preset === currentPreset ? "border-primary/40 shadow-[0_18px_30px_rgba(36,107,255,0.12)]" : "border-[var(--app-border)]"
             )}
           >
             <div className="flex items-center justify-between mb-3">
@@ -80,7 +80,7 @@ export default function OptionsPanel({ options, preset, onPresetChange, onOption
         <OptionItem
           id="strip_metadata"
           icon={Shield}
-          title="Purger les metadonnees"
+          title="Purger les métadonnées"
           description="Supprime l'auteur, l'EXIF, les dates techniques et les informations de localisation quand elles existent."
           checked={options.strip_metadata}
         />
@@ -88,21 +88,21 @@ export default function OptionsPanel({ options, preset, onPresetChange, onOption
           id="compress_output"
           icon={FileText}
           title="Compression optimale"
-          description="Reduit la taille du fichier pour faciliter le partage sans sacrifier inutilement la lisibilite."
+          description="Réduit la taille du fichier pour faciliter le partage sans sacrifier inutilement la lisibilité."
           checked={options.compress_output}
         />
         <OptionItem
           id="redact_visible_text"
           icon={EyeOff}
           title="Masquer le texte"
-          description="Utilise l'OCR pour caviarder le texte visible dans les images, PDF et autres medias compatibles."
+          description="Utilise l'OCR pour caviarder le texte visible dans les images, PDF et autres médias compatibles."
           checked={options.redact_visible_text}
         />
         <OptionItem
           id="remove_audio"
           icon={VolumeX}
           title="Supprimer l'audio"
-          description="Retire la piste sonore des videos exportees pour eviter les fuites d'informations vocales."
+          description="Retire la piste sonore des vidéos exportées pour éviter les fuites d'informations vocales."
           checked={options.remove_audio}
         />
       </div>

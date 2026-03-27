@@ -22,8 +22,8 @@ export default function ResultCard({ result, onDownload, onReset }) {
       <div className="glass-panel glass-panel-solid p-8 md:p-10 rounded-[2rem] relative overflow-hidden">
         <div className="absolute -top-24 -right-16 w-56 h-56 bg-accent/14 blur-[90px] rounded-full pointer-events-none" />
 
-        <p className="cp-label mb-3">Resultat</p>
-        <h2 className="cp-title text-4xl font-display font-bold mb-8">Nettoyage termine</h2>
+        <p className="cp-label mb-3">Résultat</p>
+        <h2 className="cp-title text-4xl font-display font-bold mb-8">Nettoyage terminé</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <div className="cp-stat-card flex flex-col gap-2">
@@ -31,11 +31,11 @@ export default function ResultCard({ result, onDownload, onReset }) {
             <strong className="cp-title text-3xl font-display">{formatBytes(result?.originalBytes)}</strong>
           </div>
           <div className="cp-stat-card border-primary/20 bg-primary/10 flex flex-col gap-2">
-            <span className="cp-muted text-sm">Taille optimisee</span>
+            <span className="cp-muted text-sm">Taille optimisée</span>
             <strong className="text-3xl font-display text-accent">{formatBytes(result?.outputBytes)}</strong>
           </div>
           <div className="cp-stat-card flex flex-col gap-2">
-            <span className="cp-muted text-sm">Reduction</span>
+            <span className="cp-muted text-sm">Réduction</span>
             <strong className="cp-title text-3xl font-display">{percentStr}%</strong>
           </div>
         </div>
@@ -43,7 +43,7 @@ export default function ResultCard({ result, onDownload, onReset }) {
         <div className="cp-info-strip rounded-[1.25rem] p-4 flex items-start gap-3 mb-8">
           <Info className="text-primary w-5 h-5 flex-shrink-0 mt-0.5" />
           <p className="cp-soft text-sm leading-relaxed">
-            Tu as economise <strong className="cp-title">{savings}</strong>. Les metadonnees invisibles ont ete traitees en local sur cette session avant telechargement.
+            Tu as économisé <strong className="cp-title">{savings}</strong>. Les métadonnées invisibles ont été traitées en local sur cette session avant téléchargement.
           </p>
         </div>
 
@@ -52,7 +52,7 @@ export default function ResultCard({ result, onDownload, onReset }) {
         <div className="flex flex-col sm:flex-row gap-4">
           <button onClick={onDownload} className="cp-action-primary flex-1">
             <Download className="w-5 h-5" />
-            Telecharger le fichier
+            Télécharger le fichier
           </button>
           <button onClick={onReset} className="cp-action-secondary sm:w-auto">
             <RefreshCcw className="w-5 h-5" />

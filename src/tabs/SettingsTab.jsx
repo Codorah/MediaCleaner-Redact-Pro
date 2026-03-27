@@ -8,20 +8,20 @@ const fieldClassName = "cp-input";
 const themeOptions = [
   {
     id: "system",
-    label: "Systeme",
+    label: "Système",
     description: "Suit automatiquement le mode de ton appareil.",
     icon: MonitorCog,
   },
   {
     id: "dark",
     label: "Dark",
-    description: "Interface plus contrastee pour une ambiance tech.",
+    description: "Interface plus contrastée pour une ambiance tech.",
     icon: MoonStar,
   },
   {
     id: "light",
     label: "Light",
-    description: "Lecture plus douce et plus lumineuse en journee.",
+    description: "Lecture plus douce et plus lumineuse en journée.",
     icon: SunMedium,
   },
 ];
@@ -53,7 +53,7 @@ export default function SettingsTab({
         <p className="cp-label">Infos produit</p>
         <h2 className="cp-title text-4xl font-display font-bold">Parametres et pilotage local</h2>
         <p className="cp-muted max-w-3xl leading-relaxed">
-          Regle l'apparence, decide si tu veux garder un historique local de tes nettoyages et retrouve les informations utiles pour comprendre comment Cleaner Pro protege tes fichiers.
+          Règle l'apparence, décide si tu veux garder un historique local de tes nettoyages et retrouve les informations utiles pour comprendre comment Cleaner Pro protège tes fichiers.
         </p>
       </div>
 
@@ -82,7 +82,7 @@ export default function SettingsTab({
                     <div className="cp-icon-shell">
                       <Icon className="w-5 h-5 text-primary" />
                     </div>
-                    <span className={clsx("text-xs font-semibold", isActive ? "text-primary" : "cp-muted")}>{isActive ? "Selectionne" : "Disponible"}</span>
+                  <span className={clsx("text-xs font-semibold", isActive ? "text-primary" : "cp-muted")}>{isActive ? "Sélectionné" : "Disponible"}</span>
                   </div>
                   <p className="cp-title font-bold mb-2">{option.label}</p>
                   <p className="cp-muted text-sm leading-relaxed">{option.description}</p>
@@ -103,7 +103,7 @@ export default function SettingsTab({
               onClick={() => onHistoryEnabledChange(!historyEnabled)}
               className={clsx("cp-action-secondary min-w-[138px]", historyEnabled && "border-primary/35 text-primary")}
             >
-              {historyEnabled ? "Active" : "Desactive"}
+              {historyEnabled ? "Activé" : "Désactivé"}
             </button>
           </div>
 
@@ -114,7 +114,7 @@ export default function SettingsTab({
             <div>
               <p className="cp-title font-bold mb-1">Historique local des nettoyages</p>
               <p className="cp-muted text-sm leading-relaxed">
-                Quand cette option est active, chaque fichier traite est ajoute a l'onglet Suivi sur cet appareil uniquement. Aucune inscription n'est necessaire.
+                Quand cette option est activée, chaque fichier traité est ajouté à l'onglet Suivi sur cet appareil uniquement. Aucune inscription n'est nécessaire.
               </p>
             </div>
           </div>
@@ -134,7 +134,7 @@ export default function SettingsTab({
 
       <div className="grid xl:grid-cols-[1.1fr_0.9fr] gap-6">
         <div className="glass-panel glass-panel-solid rounded-[2rem] p-6 md:p-8">
-          <h3 className="cp-title text-2xl font-display font-bold mb-4">Confidentialite et stockage</h3>
+          <h3 className="cp-title text-2xl font-display font-bold mb-4">Confidentialité et stockage</h3>
           <div className="space-y-4">
             <div className="cp-info-strip rounded-[1.3rem] p-4 flex items-start gap-4">
               <div className="cp-icon-shell">
@@ -143,7 +143,7 @@ export default function SettingsTab({
               <div>
                 <p className="cp-title font-semibold mb-1">Traitement maitrise</p>
                 <p className="cp-muted text-sm leading-relaxed">
-                  Cleaner Pro est pense pour limiter l'exposition de tes fichiers: nettoyage des metadonnees, limitation des traces inutiles et possibilite de traitement local ou auto-heberge.
+                  Cleaner Pro est pensé pour limiter l'exposition de tes fichiers: nettoyage des métadonnées, limitation des traces inutiles et possibilité de traitement local ou auto-hébergé.
                 </p>
               </div>
             </div>
@@ -155,7 +155,7 @@ export default function SettingsTab({
               <div>
                 <p className="cp-title font-semibold mb-1">Dossiers temporaires ephemeres</p>
                 <p className="cp-muted text-sm leading-relaxed">
-                  Les traitements web passent par des dossiers temporaires isoles, nettoyes automatiquement, avec limitation par IP et en-tetes HTTP de securite.
+                  Les traitements web passent par des dossiers temporaires isolés, nettoyés automatiquement, avec limitation par IP et en-têtes HTTP de sécurité.
                 </p>
               </div>
             </div>
@@ -164,7 +164,7 @@ export default function SettingsTab({
 
         <div className="glass-panel glass-panel-solid rounded-[2rem] p-6 md:p-8 relative overflow-hidden">
           <div className="absolute -top-10 -right-10 w-48 h-48 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
-          <h3 className="cp-title text-2xl font-display font-bold mb-6">Equipe et contact</h3>
+          <h3 className="cp-title text-2xl font-display font-bold mb-6">Équipe et contact</h3>
 
           <div className="flex flex-col md:flex-row gap-6 items-start">
             <div className="flex-shrink-0 w-24 h-24 bg-gradient-to-br from-primary to-accent rounded-2xl flex items-center justify-center text-3xl font-bold text-white shadow-xl shadow-primary/20">
@@ -199,19 +199,19 @@ export default function SettingsTab({
           <details className="cp-info-strip p-4 rounded-[1.2rem] cursor-pointer group">
             <summary className="font-medium cp-title select-none">Que fait exactement le nettoyage ?</summary>
             <p className="cp-muted text-sm mt-3 pl-2 border-l-2 border-primary leading-relaxed">
-              Le service peut supprimer les metadonnees, reduire la taille des medias et, selon l'option choisie, masquer le texte visible sur certaines categories de fichiers.
+              Le service peut supprimer les métadonnées, réduire la taille des médias et, selon l'option choisie, masquer le texte visible sur certaines catégories de fichiers.
             </p>
           </details>
           <details className="cp-info-strip p-4 rounded-[1.2rem] cursor-pointer group">
             <summary className="font-medium cp-title select-none">Quelles protections sont actives sur le site ?</summary>
             <p className="cp-muted text-sm mt-3 pl-2 border-l-2 border-primary leading-relaxed">
-              Le service applique des limites par IP, isole les traitements dans des dossiers temporaires, ajoute des en-tetes HTTP de securite et peut brancher un scanner antivirus sur les uploads.
+              Le service applique des limites par IP, isole les traitements dans des dossiers temporaires, ajoute des en-têtes HTTP de sécurité et peut brancher un scanner antivirus sur les uploads.
             </p>
           </details>
           <details className="cp-info-strip p-4 rounded-[1.2rem] cursor-pointer group">
             <summary className="font-medium cp-title select-none">Pourquoi le mode OCR est-il plus lent ?</summary>
             <p className="cp-muted text-sm mt-3 pl-2 border-l-2 border-accent leading-relaxed">
-              Le caviardage OCR analyse visuellement les pages, images ou frames video. C'est donc plus gourmand en CPU et en memoire qu'un simple nettoyage de metadonnees.
+              Le caviardage OCR analyse visuellement les pages, images ou frames vidéo. C'est donc plus gourmand en CPU et en mémoire qu'un simple nettoyage de métadonnées.
             </p>
           </details>
         </div>
