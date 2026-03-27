@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import zipfile
@@ -9,6 +10,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Iterable
 from uuid import uuid4
+from xml.etree import ElementTree as ET
 
 os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
 os.environ.setdefault("OMP_NUM_THREADS", "1")
@@ -35,38 +37,93 @@ TEXT_EXTENSIONS = {".txt", ".csv", ".md", ".json", ".xml", ".html", ".rtf"}
 PPTX_MEDIA_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 SUPPORTED_EXTENSIONS = IMAGE_EXTENSIONS | VIDEO_EXTENSIONS | TEXT_EXTENSIONS | {".pdf", ".pptx"}
 
-IMAGE_METADATA_LABELS = {
-    "Artist": "Auteur",
-    "Copyright": "Copyright",
-    "DateTime": "Dernière modification",
-    "DateTimeOriginal": "Date de prise de vue",
-    "HostComputer": "Ordinateur hôte",
-    "ImageDescription": "Description",
-    "Make": "Marque de l'appareil",
-    "Model": "Modèle de l'appareil",
-    "Software": "Logiciel",
+IMAGE_METADATA_RULES = {
+    "Artist": ("Auteur", "Identité", "sensitive"),
+    "Copyright": ("Copyright", "Identité", "sensitive"),
+    "DateTime": ("Dernière modification", "Chronologie", "sensitive"),
+    "DateTimeDigitized": ("Date de numérisation", "Chronologie", "sensitive"),
+    "DateTimeOriginal": ("Date de prise de vue", "Chronologie", "sensitive"),
+    "HostComputer": ("Ordinateur hôte", "Environnement", "sensitive"),
+    "ImageDescription": ("Description", "Contenu", "sensitive"),
+    "Make": ("Marque de l'appareil", "Appareil", "sensitive"),
+    "Model": ("Modèle de l'appareil", "Appareil", "sensitive"),
+    "Software": ("Logiciel", "Origine", "sensitive"),
+    "OwnerName": ("Propriétaire", "Identité", "sensitive"),
+    "BodySerialNumber": ("Numéro de série boîtier", "Appareil", "sensitive"),
+    "LensModel": ("Modèle d'objectif", "Appareil", "sensitive"),
+    "LensSerialNumber": ("Numéro de série objectif", "Appareil", "sensitive"),
+    "SerialNumber": ("Numéro de série", "Appareil", "sensitive"),
+    "UserComment": ("Commentaire utilisateur", "Contenu", "sensitive"),
+    "XPAuthor": ("Auteur (XP)", "Identité", "sensitive"),
+    "XPComment": ("Commentaire (XP)", "Contenu", "sensitive"),
+    "XPSubject": ("Sujet (XP)", "Contenu", "sensitive"),
+    "XPTitle": ("Titre (XP)", "Contenu", "sensitive"),
 }
-PDF_METADATA_LABELS = {
-    "title": "Titre",
-    "author": "Auteur",
-    "subject": "Sujet",
-    "keywords": "Mots-clés",
-    "creator": "Application source",
-    "producer": "Producteur PDF",
-    "creationDate": "Date de création",
-    "modDate": "Date de modification",
+PNG_METADATA_RULES = {
+    "Author": ("Auteur", "Identité", "sensitive"),
+    "Comment": ("Commentaire", "Contenu", "sensitive"),
+    "Description": ("Description", "Contenu", "sensitive"),
+    "Software": ("Logiciel", "Origine", "sensitive"),
+    "Creation Time": ("Date de création", "Chronologie", "sensitive"),
+    "Disclaimer": ("Clause de non-responsabilité", "Légal", "sensitive"),
+    "Warning": ("Avertissement", "Légal", "sensitive"),
+    "Source": ("Source", "Origine", "sensitive"),
+    "dpi": ("DPI", "Technique", "technical"),
 }
-PPTX_METADATA_LABELS = {
-    "author": "Auteur",
-    "title": "Titre",
-    "subject": "Sujet",
-    "category": "Catégorie",
-    "keywords": "Mots-clés",
-    "comments": "Commentaires",
-    "last_modified_by": "Dernière modification par",
-    "language": "Langue",
-    "created": "Date de création",
-    "modified": "Date de modification",
+PDF_METADATA_RULES = {
+    "title": ("Titre", "Contenu", "sensitive"),
+    "author": ("Auteur", "Identité", "sensitive"),
+    "subject": ("Sujet", "Contenu", "sensitive"),
+    "keywords": ("Mots-clés", "Contenu", "sensitive"),
+    "creator": ("Application source", "Origine", "sensitive"),
+    "producer": ("Producteur PDF", "Origine", "sensitive"),
+    "creationDate": ("Date de création", "Chronologie", "sensitive"),
+    "modDate": ("Date de modification", "Chronologie", "sensitive"),
+}
+PPTX_CORE_METADATA_RULES = {
+    "author": ("Auteur", "Identité", "sensitive"),
+    "title": ("Titre", "Contenu", "sensitive"),
+    "subject": ("Sujet", "Contenu", "sensitive"),
+    "category": ("Catégorie", "Contenu", "sensitive"),
+    "keywords": ("Mots-clés", "Contenu", "sensitive"),
+    "comments": ("Commentaires", "Contenu", "sensitive"),
+    "last_modified_by": ("Dernière modification par", "Identité", "sensitive"),
+    "language": ("Langue", "Contexte", "technical"),
+    "created": ("Date de création", "Chronologie", "sensitive"),
+    "modified": ("Date de modification", "Chronologie", "sensitive"),
+}
+PPTX_APP_METADATA_RULES = {
+    "Application": ("Application", "Origine", "sensitive"),
+    "Company": ("Entreprise", "Organisation", "sensitive"),
+    "Manager": ("Manager", "Organisation", "sensitive"),
+    "HyperlinkBase": ("Base des liens", "Origine", "sensitive"),
+    "AppVersion": ("Version de l'application", "Technique", "technical"),
+    "PresentationFormat": ("Format de présentation", "Technique", "technical"),
+}
+VIDEO_METADATA_RULES = {
+    "location": ("Localisation GPS", "Géolocalisation", "sensitive"),
+    "location-eng": ("Localisation GPS", "Géolocalisation", "sensitive"),
+    "com.apple.quicktime.location.ISO6709": ("Localisation GPS", "Géolocalisation", "sensitive"),
+    "com.apple.quicktime.make": ("Marque de l'appareil", "Appareil", "sensitive"),
+    "com.apple.quicktime.model": ("Modèle de l'appareil", "Appareil", "sensitive"),
+    "com.apple.quicktime.software": ("Logiciel", "Origine", "sensitive"),
+    "com.apple.quicktime.creationdate": ("Date de création (Apple)", "Chronologie", "sensitive"),
+    "creation_time": ("Date de création", "Chronologie", "sensitive"),
+    "encoder": ("Encodeur", "Origine", "sensitive"),
+    "handler_name": ("Nom du flux", "Origine", "technical"),
+    "vendor_id": ("Identifiant fournisseur", "Origine", "technical"),
+    "major_brand": ("Format principal", "Technique", "technical"),
+    "minor_version": ("Version du conteneur", "Technique", "technical"),
+    "compatible_brands": ("Formats compatibles", "Technique", "technical"),
+    "make": ("Marque de l'appareil", "Appareil", "sensitive"),
+    "model": ("Modèle de l'appareil", "Appareil", "sensitive"),
+    "software": ("Logiciel", "Origine", "sensitive"),
+    "artist": ("Auteur", "Identité", "sensitive"),
+    "author": ("Auteur", "Identité", "sensitive"),
+    "comment": ("Commentaire", "Contenu", "sensitive"),
+    "copyright": ("Copyright", "Identité", "sensitive"),
+    "description": ("Description", "Contenu", "sensitive"),
+    "title": ("Titre", "Contenu", "sensitive"),
 }
 
 
@@ -122,17 +179,32 @@ def stringify_metadata_value(value: object) -> str:
         return ", ".join([part for part in parts if part])
     if hasattr(value, "isoformat"):
         try:
-            return value.isoformat(sep=" ", timespec="seconds")
-        except TypeError:
-            return value.isoformat()
+            # type: ignore - we know it has isoformat
+            return value.isoformat(sep=" ", timespec="seconds") 
+        except Exception:
+            try:
+                # type: ignore
+                return value.isoformat()
+            except Exception:
+                pass
     text = str(value).strip()
     return text if text and text.lower() != "none" else ""
 
 
-def append_metadata_entry(entries: list[dict[str, str]], label: str, value: object, category: str = "Métadonnée") -> None:
+def append_metadata_entry(
+    entries: list[dict[str, str]],
+    label: str,
+    value: object,
+    category: str = "Métadonnée",
+    risk: str = "sensitive",
+    scope: str | None = None,
+) -> None:
     rendered = stringify_metadata_value(value)
     if rendered:
-        entries.append({"label": label, "value": rendered, "category": category})
+        entry = {"label": label, "value": rendered, "category": category, "risk": risk}
+        if scope:
+            entry["scope"] = scope
+        entries.append(entry)
 
 
 def gps_coordinate_to_decimal(raw_value: object, ref: object) -> float | None:
@@ -155,26 +227,33 @@ def inspect_image_metadata(input_path: str) -> tuple[list[dict[str, str]], list[
     notes: list[str] = []
     with Image.open(input_path) as source_image:
         exif = source_image.getexif()
-        if not exif:
-            notes.append("Aucune donnée EXIF riche détectée dans cette image.")
-            return entries, notes
+        if exif:
+            for tag_id, raw_value in exif.items():
+                tag_name = TAGS.get(tag_id, str(tag_id))
+                if tag_name == "GPSInfo" and isinstance(raw_value, dict):
+                    gps_info = {GPSTAGS.get(key, str(key)): value for key, value in raw_value.items()}
+                    latitude = gps_coordinate_to_decimal(gps_info.get("GPSLatitude"), gps_info.get("GPSLatitudeRef"))
+                    longitude = gps_coordinate_to_decimal(gps_info.get("GPSLongitude"), gps_info.get("GPSLongitudeRef"))
+                    if latitude is not None and longitude is not None:
+                        append_metadata_entry(entries, "Localisation GPS", f"{latitude:.5f}, {longitude:.5f}", "Géolocalisation", "sensitive")
+                    append_metadata_entry(entries, "Altitude GPS", gps_info.get("GPSAltitude"), "Géolocalisation", "sensitive")
+                    continue
 
-        for tag_id, raw_value in exif.items():
-            tag_name = TAGS.get(tag_id, str(tag_id))
-            if tag_name == "GPSInfo" and isinstance(raw_value, dict):
-                gps_info = {GPSTAGS.get(key, str(key)): value for key, value in raw_value.items()}
-                latitude = gps_coordinate_to_decimal(gps_info.get("GPSLatitude"), gps_info.get("GPSLatitudeRef"))
-                longitude = gps_coordinate_to_decimal(gps_info.get("GPSLongitude"), gps_info.get("GPSLongitudeRef"))
-                if latitude is not None and longitude is not None:
-                    append_metadata_entry(entries, "Localisation GPS", f"{latitude:.5f}, {longitude:.5f}", "Géolocalisation")
-                continue
+                rule = IMAGE_METADATA_RULES.get(tag_name)
+                if rule:
+                    label, category, risk = rule
+                    append_metadata_entry(entries, label, raw_value, category, risk)
 
-            label = IMAGE_METADATA_LABELS.get(tag_name)
-            if label:
-                append_metadata_entry(entries, label, raw_value)
+        for info_key, info_value in source_image.info.items():
+            rule = PNG_METADATA_RULES.get(info_key)
+            if rule:
+                label, category, risk = rule
+                append_metadata_entry(entries, label, info_value, category, risk)
+            elif "xmp" in info_key.lower():
+                append_metadata_entry(entries, "Métadonnées XMP", "Présentes dans le fichier", "Origine", "sensitive")
 
     if not entries:
-        notes.append("Des informations techniques existent peut-être, mais aucune métadonnée sensible courante n'a été relevée.")
+        notes.append("Aucune donnée de géolocalisation, d'appareil, d'auteur ou de logiciel n'a été trouvée dans cette image.")
     return entries, notes
 
 
@@ -183,10 +262,45 @@ def inspect_pdf_metadata(input_path: str) -> tuple[list[dict[str, str]], list[st
     notes: list[str] = []
     with fitz.open(input_path) as document:
         metadata = document.metadata or {}
-        for key, label in PDF_METADATA_LABELS.items():
-            append_metadata_entry(entries, label, metadata.get(key))
+        for key, (label, category, risk) in PDF_METADATA_RULES.items():
+            append_metadata_entry(entries, label, metadata.get(key), category, risk)
         if document.page_count:
-            append_metadata_entry(entries, "Nombre de pages", document.page_count, "Technique")
+            append_metadata_entry(entries, "Nombre de pages", document.page_count, "Technique", "technical")
+
+        try:
+            xml_metadata = document.get_xml_metadata()
+        except Exception:
+            xml_metadata = ""
+        
+        if xml_metadata.strip():
+            # Deep XMP parsing to find specific tools, history, and users
+            if "Adobe" in xml_metadata:
+                append_metadata_entry(entries, "Trace logicielle", "Adobe Systems detected", "Origine", "sensitive")
+            if "Microsoft" in xml_metadata:
+                append_metadata_entry(entries, "Trace logicielle", "Microsoft Office detected", "Origine", "sensitive")
+            
+            try:
+                # Basic regex search for common XMP user tags if ET fails or for broad coverage
+                user_match = re.search(r"<dc:creator>\s*<rdf:Seq>\s*<rdf:li>(.+?)</rdf:li>", xml_metadata, re.DOTALL)
+                if user_match:
+                    append_metadata_entry(entries, "Auteur (XMP DC)", user_match.group(1).strip(), "Identité", "sensitive")
+                
+                # Search for owner/creator in other XMP namespaces
+                owner_match = re.search(r'xmp:Owner\s*=\s*"(.+?)"', xml_metadata)
+                if owner_match:
+                    append_metadata_entry(entries, "Propriétaire (XMP)", owner_match.group(1).strip(), "Identité", "sensitive")
+
+                tool_match = re.search(r'xmp:CreatorTool\s*>\s*(.+?)\s*<\s*/xmp:CreatorTool', xml_metadata) or \
+                             re.search(r'xmp:CreatorTool\s*=\s*"(.+?)"', xml_metadata)
+                if tool_match:
+                    append_metadata_entry(entries, "Outil de création (XMP)", tool_match.group(1).strip(), "Origine", "sensitive")
+                    
+                # History entries can reveal internal paths or previous authors
+                if "xmpMM:History" in xml_metadata:
+                    append_metadata_entry(entries, "Historique XMP", "Contient des traces d'édition", "Origine", "sensitive")
+            except Exception:
+                pass
+                
     if not entries:
         notes.append("Aucune métadonnée PDF explicite n'a été détectée.")
     return entries, notes
@@ -197,11 +311,65 @@ def inspect_pptx_metadata(input_path: str) -> tuple[list[dict[str, str]], list[s
     notes: list[str] = []
     presentation = Presentation(input_path)
     core = presentation.core_properties
-    for attribute, label in PPTX_METADATA_LABELS.items():
-        append_metadata_entry(entries, label, getattr(core, attribute, None))
+    for attribute, (label, category, risk) in PPTX_CORE_METADATA_RULES.items():
+        append_metadata_entry(entries, label, getattr(core, attribute, None), category, risk)
+
+    try:
+        with zipfile.ZipFile(input_path, "r") as archive:
+            if "docProps/app.xml" in archive.namelist():
+                app_xml = archive.read("docProps/app.xml")
+                root = ET.fromstring(app_xml)
+                namespace = {"ep": "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"}
+                for tag_name, (label, category, risk) in PPTX_APP_METADATA_RULES.items():
+                    element = root.find(f"ep:{tag_name}", namespace)
+                    if element is not None and element.text:
+                        append_metadata_entry(entries, label, element.text, category, risk)
+            
+            # Check for custom properties which might contain organization/user info
+            if "docProps/custom.xml" in archive.namelist():
+                custom_xml = archive.read("docProps/custom.xml")
+                root_custom = ET.fromstring(custom_xml)
+                ns_custom = {"ct": "http://schemas.openxmlformats.org/officeDocument/2006/custom-properties",
+                            "vt": "http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"}
+                for prop in root_custom.findall("ct:property", ns_custom):
+                    name = prop.get("name")
+                    value_elem = prop.find("vt:lpwstr", ns_custom) or prop.find("vt:lpstr", ns_custom)
+                    if name and value_elem is not None and value_elem.text:
+                        append_metadata_entry(entries, f"Propriété personnalisée: {name}", value_elem.text, "Organisation", "sensitive")
+    except Exception:
+        pass
+
     if not entries:
         notes.append("Aucune propriété Office sensible n'a été détectée dans cette présentation.")
     return entries, notes
+
+
+def parse_ffmpeg_metadata(stderr_output: str) -> list[tuple[str, str, str]]:
+    entries: list[tuple[str, str, str]] = []
+    current_scope: str | None = None
+    pending_scope = "Conteneur"
+
+    for line in stderr_output.splitlines():
+        stream_match = re.match(r"\s*Stream #.*: (Video|Audio|Subtitle):", line)
+        if stream_match:
+            stream_type = stream_match.group(1).lower()
+            pending_scope = f"Flux {stream_type}"
+            current_scope = None
+            continue
+
+        if re.match(r"\s{2,}Metadata:\s*$", line):
+            current_scope = pending_scope
+            continue
+
+        match = re.match(r"\s{4,}([^:]+?)\s*:\s*(.+)$", line)
+        if current_scope and match:
+            entries.append((current_scope, match.group(1).strip(), match.group(2).strip()))
+            continue
+
+        if line.strip() and not line.startswith(" "):
+            current_scope = None
+
+    return entries
 
 
 def inspect_video_metadata(input_path: str) -> tuple[list[dict[str, str]], list[str]]:
@@ -214,13 +382,39 @@ def inspect_video_metadata(input_path: str) -> tuple[list[dict[str, str]], list[
         fps = float(capture.get(cv2.CAP_PROP_FPS) or 0.0)
         frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
         if width and height:
-            append_metadata_entry(entries, "Résolution", f"{width} x {height}", "Technique")
+            append_metadata_entry(entries, "Résolution", f"{width} x {height}", "Technique", "technical")
         if fps:
-            append_metadata_entry(entries, "Images par seconde", f"{fps:.2f}", "Technique")
+            append_metadata_entry(entries, "Images par seconde", f"{fps:.2f}", "Technique", "technical")
         if frame_count and fps:
-            append_metadata_entry(entries, "Durée estimée", f"{frame_count / fps:.1f} s", "Technique")
+            append_metadata_entry(entries, "Durée estimée", f"{frame_count / fps:.1f} s", "Technique", "technical")
     capture.release()
-    notes.append("L'analyse détaillée des métadonnées vidéo pourra être enrichie ensuite avec ffprobe.")
+
+    ffmpeg_exe = get_ffmpeg_executable()
+    if ffmpeg_exe is not None:
+        try:
+            completed = subprocess.run(
+                [ffmpeg_exe, "-hide_banner", "-i", input_path],
+                capture_output=True,
+                text=True,
+                timeout=20,
+            )
+            for scope, raw_key, raw_value in parse_ffmpeg_metadata(completed.stderr):
+                # Search for location tags in various formats
+                if "location" in raw_key.lower():
+                    append_metadata_entry(entries, "Coordonnées GPS raw", raw_value, "Géolocalisation", "sensitive", scope)
+                
+                rule = VIDEO_METADATA_RULES.get(raw_key)
+                if rule:
+                    label, category, risk = rule
+                    append_metadata_entry(entries, label, raw_value, category, risk, scope)
+                elif raw_key.lower() in {"artist", "author", "creator", "owner"}:
+                    append_metadata_entry(entries, f"Métadonnée sensitive: {raw_key}", raw_value, "Identité", "sensitive", scope)
+        except Exception:
+            notes.append("Impossible d'inspecter en profondeur les tags du conteneur vidéo sur cette instance.")
+
+    sensitive_entries = [entry for entry in entries if entry.get("risk") == "sensitive"]
+    if not sensitive_entries:
+        notes.append("Aucune géolocalisation, identité ou source d'export sensible n'a été trouvée dans cette vidéo. Seules des traces techniques d'encodage ont été relevées.")
     return entries, notes
 
 
@@ -249,6 +443,8 @@ def inspect_file_metadata(input_path: str) -> dict[str, object]:
     return {
         "file_type": file_type,
         "detected_count": len(entries),
+        "sensitive_count": sum(1 for entry in entries if entry.get("risk") == "sensitive"),
+        "technical_count": sum(1 for entry in entries if entry.get("risk") == "technical"),
         "entries": entries,
         "notes": notes,
     }

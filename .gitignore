@@ -18,3 +18,5 @@ build_cmd.log
 build_err*.txt
 debug.log
 src/debug.log
+build/
+.models/
