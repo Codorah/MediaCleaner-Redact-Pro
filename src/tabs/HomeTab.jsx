@@ -54,12 +54,12 @@ const featureCards = [
   {
     icon: <Zap />,
     title: "Presets préconfigurés",
-    desc: "Low, Medium, High et Custom donnent un point de départ clair selon ton niveau de protection.",
+    desc: "Low, Medium, High et Custom évitent d'avoir à régler chaque option à la main.",
   },
   {
     icon: <Server />,
     title: "Exécution maîtrisée",
-    desc: "Le produit vise une exécution locale ou auto-hébergée pour garder le contrôle sur le traitement.",
+    desc: "Le produit vise une exécution locale ou auto-hébergée pour garder la maîtrise du traitement.",
   },
 ];
 
@@ -121,7 +121,7 @@ export default function HomeTab({ onStart }) {
             </h1>
 
             <p className="cp-soft text-lg md:text-xl leading-relaxed">
-              Cleaner Pro retire les métadonnées sensibles, optimise la taille des fichiers et peut masquer le texte visible quand le niveau de confidentialité l'exige.
+              Cleaner Pro retire les métadonnées sensibles, allège le partage des fichiers et peut masquer le texte visible quand le niveau de confidentialité l'exige.
             </p>
           </div>
 
@@ -220,9 +220,9 @@ export default function HomeTab({ onStart }) {
                 <MonitorDown className="w-4 h-4 text-accent" />
                 Application desktop
               </div>
-              <h2 className="cp-title text-3xl font-display font-bold">Téléchargement de l'application bureau</h2>
+              <h2 className="cp-title text-3xl font-display font-bold">Version bureau</h2>
               <p className="cp-soft leading-relaxed">
-                Une fois le binaire prêt, cette instance pourra proposer un téléchargement direct et propre de la version Windows de Cleaner Pro.
+                Quand le binaire Windows sera prêt, cette instance pourra proposer un téléchargement direct de Cleaner Pro.
               </p>
               <p className="cp-muted text-sm">{desktopDownload.note}</p>
               {desktopDownload.filename && (

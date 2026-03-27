@@ -1,18 +1,18 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #246bff;
-  --color-accent: #14b8a6;
+  --color-primary: #2859d1;
+  --color-accent: #168679;
   --font-sans: "Aptos", "Segoe UI", "Trebuchet MS", sans-serif;
   --font-display: "Bahnschrift", "Arial Narrow", "Segoe UI", sans-serif;
 }
 
 :root,
 html[data-theme="dark"] {
-  --app-bg: #07111a;
-  --app-bg-alt: #102130;
-  --app-surface: rgba(10, 18, 29, 0.74);
-  --app-surface-strong: rgba(13, 24, 37, 0.9);
+  --app-bg: #09131c;
+  --app-bg-alt: #0f1e2a;
+  --app-surface: rgba(10, 18, 29, 0.72);
+  --app-surface-strong: rgba(13, 24, 37, 0.88);
   --app-card: rgba(255, 255, 255, 0.05);
   --app-border: rgba(255, 255, 255, 0.1);
   --app-border-strong: rgba(255, 255, 255, 0.16);
@@ -22,16 +22,16 @@ html[data-theme="dark"] {
   --input-bg: rgba(255, 255, 255, 0.04);
   --shadow-rgb: 5, 10, 18;
   --grid-line: rgba(255, 255, 255, 0.06);
-  --accent-fade: rgba(36, 107, 255, 0.16);
-  --accent-fade-alt: rgba(20, 184, 166, 0.14);
+  --accent-fade: rgba(40, 89, 209, 0.13);
+  --accent-fade-alt: rgba(22, 134, 121, 0.11);
   --warning-bg: rgba(246, 176, 67, 0.12);
   --warning-border: rgba(246, 176, 67, 0.28);
   --warning-text: #ffd7a0;
 }
 
 html[data-theme="light"] {
-  --app-bg: #eef5f9;
-  --app-bg-alt: #d7e7f0;
+  --app-bg: #f2f6f8;
+  --app-bg-alt: #dde8ee;
   --app-surface: rgba(255, 255, 255, 0.72);
   --app-surface-strong: rgba(255, 255, 255, 0.92);
   --app-card: rgba(7, 17, 26, 0.04);
@@ -43,8 +43,8 @@ html[data-theme="light"] {
   --input-bg: rgba(17, 34, 51, 0.03);
   --shadow-rgb: 59, 88, 118;
   --grid-line: rgba(16, 33, 48, 0.06);
-  --accent-fade: rgba(36, 107, 255, 0.08);
-  --accent-fade-alt: rgba(20, 184, 166, 0.08);
+  --accent-fade: rgba(40, 89, 209, 0.06);
+  --accent-fade-alt: rgba(22, 134, 121, 0.06);
   --warning-bg: rgba(246, 176, 67, 0.16);
   --warning-border: rgba(217, 138, 0, 0.25);
   --warning-text: #8a5800;
@@ -78,8 +78,8 @@ body::before {
   background-image:
     linear-gradient(var(--grid-line) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-  background-size: 46px 46px;
-  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.35), transparent 82%);
+  background-size: 56px 56px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.22), transparent 78%);
   pointer-events: none;
   z-index: -2;
 }
@@ -98,9 +98,9 @@ a {
 
 .glass-panel {
   background: var(--app-surface);
-  backdrop-filter: blur(22px);
+  backdrop-filter: blur(18px);
   border: 1px solid var(--app-border);
-  box-shadow: 0 26px 70px rgba(var(--shadow-rgb), 0.16);
+  box-shadow: 0 18px 52px rgba(var(--shadow-rgb), 0.14);
 }
 
 .glass-panel-solid {
@@ -146,9 +146,9 @@ a {
 }
 
 .cp-accent-panel {
-  border: 1px solid rgba(36, 107, 255, 0.18);
+  border: 1px solid rgba(40, 89, 209, 0.16);
   background:
-    linear-gradient(135deg, rgba(36, 107, 255, 0.1), transparent 60%),
+    linear-gradient(135deg, rgba(40, 89, 209, 0.08), transparent 62%),
     var(--app-surface-strong);
 }
 
@@ -166,8 +166,8 @@ a {
 }
 
 .cp-action-primary {
-  background: linear-gradient(135deg, #246bff, #14b8a6);
-  box-shadow: 0 18px 45px rgba(36, 107, 255, 0.24);
+  background: linear-gradient(135deg, #2859d1, #168679);
+  box-shadow: 0 14px 34px rgba(40, 89, 209, 0.2);
   color: #ffffff;
 }
 
@@ -205,8 +205,8 @@ a {
 
 .cp-input:focus-visible {
   outline: none;
-  border-color: rgba(36, 107, 255, 0.45);
-  box-shadow: 0 0 0 4px rgba(36, 107, 255, 0.14);
+  border-color: rgba(40, 89, 209, 0.42);
+  box-shadow: 0 0 0 4px rgba(40, 89, 209, 0.12);
 }
 
 .cp-nav-button {
@@ -218,8 +218,8 @@ a {
 }
 
 .cp-nav-indicator {
-  background: rgba(36, 107, 255, 0.14);
-  border: 1px solid rgba(36, 107, 255, 0.28);
+  background: rgba(40, 89, 209, 0.12);
+  border: 1px solid rgba(40, 89, 209, 0.22);
 }
 
 .cp-mobile-nav {
@@ -239,11 +239,11 @@ a {
 }
 
 .cp-theme-option.is-active {
-  border-color: rgba(36, 107, 255, 0.3);
+  border-color: rgba(40, 89, 209, 0.24);
   background:
-    linear-gradient(135deg, rgba(36, 107, 255, 0.1), transparent 55%),
+    linear-gradient(135deg, rgba(40, 89, 209, 0.08), transparent 55%),
     var(--app-surface-strong);
-  box-shadow: 0 16px 40px rgba(36, 107, 255, 0.12);
+  box-shadow: 0 14px 32px rgba(40, 89, 209, 0.1);
 }
 
 .cp-theme-option:hover {

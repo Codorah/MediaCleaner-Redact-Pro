@@ -36,6 +36,7 @@ DOWNLOAD_URL = os.getenv("PUBLIC_DOWNLOAD_URL", "/api/downloads/file")
 DESKTOP_DOWNLOAD_EXTERNAL_URL = os.getenv("DESKTOP_DOWNLOAD_EXTERNAL_URL", "").strip()
 DESKTOP_DOWNLOAD_FILENAME = os.getenv("DESKTOP_DOWNLOAD_FILENAME", "").strip()
 DESKTOP_DOWNLOAD_NOTE = os.getenv("DESKTOP_DOWNLOAD_NOTE", "").strip()
+DESKTOP_DOWNLOAD_MIN_BYTES = max(1024, int(os.getenv("DESKTOP_DOWNLOAD_MIN_BYTES", str(1024 * 1024))))
 DEFAULT_ALLOWED_ORIGINS = "http://127.0.0.1:5173,http://localhost:5173"
 ALLOWED_ORIGINS = [origin.strip() for origin in os.getenv("ALLOWED_ORIGINS", DEFAULT_ALLOWED_ORIGINS).split(",") if origin.strip()]
 DEFAULT_ALLOWED_HOSTS = "127.0.0.1,localhost,testserver,*.onrender.com"
@@ -258,10 +259,14 @@ def resolve_frontend_file(full_path: str) -> Path | None:
 def get_desktop_exe() -> Path | None:
     PUBLIC_DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
     zip_files = sorted(PUBLIC_DOWNLOADS_DIR.glob("*.zip"))
-    if zip_files:
-        return zip_files[0]
     exe_files = sorted(PUBLIC_DOWNLOADS_DIR.glob("*.exe"))
-    return exe_files[0] if exe_files else None
+    for file_path in [*zip_files, *exe_files]:
+        try:
+            if file_path.stat().st_size >= DESKTOP_DOWNLOAD_MIN_BYTES:
+                return file_path
+        except OSError:
+            continue
+    return None
 
 
 def cleanup_stale_temp_dirs() -> None:

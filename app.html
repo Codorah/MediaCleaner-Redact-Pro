@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Application Web | Cleaner Pro</title>
-  <meta name="description" content="Nettoie les metadonnees, allege les fichiers et masque le texte visible si tu l'actives. Application web installable sur mobile.">
+  <meta name="description" content="Nettoie les métadonnées, allège les fichiers et masque le texte visible si tu l'actives. Application web installable sur mobile.">
   <meta name="theme-color" content="#08141f">
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
   <link rel="manifest" href="manifest.webmanifest">
@@ -30,10 +30,10 @@
       <section class="app-hero">
         <div>
           <p class="eyebrow">Application web</p>
-          <h1>Nettoie les metadonnees et allege les fichiers sans casser le contenu.</h1>
+          <h1>Nettoie les métadonnées et allège les fichiers sans casser le contenu.</h1>
           <p class="hero-text">
-            Le comportement par defaut est prudent: on retire les metadonnees et on compresse quand c'est utile.
-            Le masquage du texte visible existe en option pour les images, PDF et videos, mais il n'efface plus le texte des slides PowerPoint.
+            Le comportement par défaut est prudent: on retire les métadonnées et on compresse quand c'est utile.
+            Le masquage du texte visible existe en option pour les images, PDF et vidéos, mais il n'efface plus le texte des slides PowerPoint.
           </p>
         </div>
         <div class="app-badges">
@@ -46,13 +46,13 @@
       <section class="app-grid app-grid-wide">
         <article class="app-card upload-card">
           <h2>Nettoyer un fichier</h2>
-          <p>Selectionne un fichier, choisis les options, puis telecharge la version nettoyee.</p>
+          <p>Sélectionne un fichier, choisis les options, puis télécharge la version nettoyée.</p>
 
           <form id="clean-form" class="clean-form">
             <label class="upload-zone" for="file-input">
               <input id="file-input" name="file" type="file" required>
               <span>Glisse ton fichier ici ou clique pour l'importer</span>
-              <small>Images, PDF, PPTX, videos et documents texte simples</small>
+              <small>Images, PDF, PPTX, vidéos et documents texte simples</small>
             </label>
 
             <div id="file-list" class="file-list" aria-live="polite"></div>
@@ -60,29 +60,29 @@
             <div class="option-grid">
               <label class="option-card">
                 <input type="checkbox" name="strip_metadata" checked>
-                <span>Effacer les metadonnees</span>
-                <small>Recommande pour reduire les traces inutiles.</small>
+                <span>Effacer les métadonnées</span>
+                <small>Recommandé pour réduire les traces inutiles.</small>
               </label>
               <label class="option-card">
                 <input type="checkbox" name="compress_output" checked>
-                <span>Alleger le fichier</span>
-                <small>Compression et re-ecriture quand c'est utile.</small>
+                <span>Alléger le fichier</span>
+                <small>Compression et réécriture quand c'est utile.</small>
               </label>
               <label class="option-card">
                 <input type="checkbox" name="redact_visible_text">
                 <span>Masquer le texte visible</span>
-                <small>Option OCR pour images, PDF et videos.</small>
+                <small>Option OCR pour images, PDF et vidéos.</small>
               </label>
               <label class="option-card">
                 <input type="checkbox" name="remove_audio">
-                <span>Retirer l'audio des videos</span>
-                <small>Pratique pour alleger davantage un export video.</small>
+                <span>Retirer l'audio des vidéos</span>
+                <small>Pratique pour alléger davantage un export vidéo.</small>
               </label>
             </div>
 
             <div class="form-actions">
-              <button class="button button-primary" id="submit-button" type="submit">Nettoyer et telecharger</button>
-              <p class="status-line" id="status-line">Pret.</p>
+              <button class="button button-primary" id="submit-button" type="submit">Nettoyer et télécharger</button>
+              <p class="status-line" id="status-line">Prêt.</p>
             </div>
           </form>
         </article>
@@ -90,17 +90,17 @@
         <article class="app-card">
           <h2>Comportement par type de fichier</h2>
           <ul class="bullet-list">
-            <li>Image: re-export sans metadonnees, compression, OCR optionnel.</li>
-            <li>PDF: nettoyage des metadonnees, compression, redaction OCR optionnelle.</li>
-            <li>PPTX: conservation des slides, nettoyage des metadonnees et allegement des medias embarques.</li>
-            <li>Video: re-encodage plus leger, nettoyage metadata, retrait audio optionnel.</li>
+            <li>Image: réexport sans métadonnées, compression, OCR optionnel.</li>
+            <li>PDF: nettoyage des métadonnées, compression, rédaction OCR optionnelle.</li>
+            <li>PPTX: conservation des slides, nettoyage des métadonnées et allégement des médias embarqués.</li>
+            <li>Vidéo: réencodage plus léger, nettoyage metadata, retrait audio optionnel.</li>
           </ul>
         </article>
 
         <article class="app-card result-card">
-          <h2>Resultat</h2>
+          <h2>Résultat</h2>
           <div id="result-box" class="result-box">
-            <p>Le fichier traite apparaitra ici avec le gain de poids estime.</p>
+            <p>Le fichier traité apparaîtra ici avec le gain de poids estimé.</p>
           </div>
         </article>
       </section>

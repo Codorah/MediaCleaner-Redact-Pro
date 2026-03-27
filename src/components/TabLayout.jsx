@@ -8,7 +8,7 @@ export default function TabLayout({ children, currentTab, onTabChange, resolvedT
     { id: "home", label: "Accueil", icon: Home },
     { id: "redact", label: "Nettoyer", icon: ShieldAlert },
     { id: "history", label: "Suivi", icon: History },
-    { id: "settings", label: "Infos", icon: Settings },
+    { id: "settings", label: "Réglages", icon: Settings },
   ];
 
   const themeLabel = resolvedTheme === "light" ? "Mode clair" : "Mode sombre";

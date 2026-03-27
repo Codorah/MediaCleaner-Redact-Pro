@@ -1,7 +1,7 @@
 {
   "name": "Cleaner Pro",
   "short_name": "Cleaner Pro",
-  "description": "Application web et PWA pour nettoyer les metadonnees, alleger les fichiers et masquer le texte visible en option.",
+  "description": "Application web et PWA pour nettoyer les métadonnées, alléger les fichiers et masquer le texte visible en option.",
   "start_url": "/app",
   "scope": "/",
   "display": "standalone",

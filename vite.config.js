@@ -2,13 +2,13 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
-export default defineConfig(({ command }) => ({
+export default defineConfig(() => ({
   plugins: [react(), tailwindcss()],
   optimizeDeps: {
     noDiscovery: true,
     include: [],
   },
-  ...(command === "serve" ? { esbuild: false } : {}),
+  esbuild: false,
   server: {
     host: "localhost",
     port: 5173,

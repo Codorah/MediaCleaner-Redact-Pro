@@ -67,7 +67,7 @@ export default function HistoryTab({ historyEnabled, historyItems, onClearHistor
                 <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-4">
                   <div>
                     <p className="cp-title text-xl font-display font-bold break-all">{item.filename}</p>
-                    <p className="cp-muted text-sm mt-1">Source: {item.sourceName}</p>
+                    <p className="cp-muted text-sm mt-1">Source : {item.sourceName}</p>
                   </div>
                   <div className="cp-pill text-xs">{formatDate(item.createdAt)}</div>
                 </div>
@@ -78,11 +78,11 @@ export default function HistoryTab({ historyEnabled, historyItems, onClearHistor
                     <p className="cp-title font-bold">{formatBytes(item.originalBytes)}</p>
                   </div>
                   <div className="cp-stat-card">
-                    <p className="cp-muted text-sm mb-2">Apres</p>
+                    <p className="cp-muted text-sm mb-2">Après</p>
                     <p className="cp-title font-bold">{formatBytes(item.outputBytes)}</p>
                   </div>
                   <div className="cp-stat-card">
-                    <p className="cp-muted text-sm mb-2">Reduction</p>
+                    <p className="cp-muted text-sm mb-2">Réduction</p>
                     <p className="cp-title font-bold">{item.reductionPercent}%</p>
                   </div>
                 </div>
@@ -100,15 +100,15 @@ export default function HistoryTab({ historyEnabled, historyItems, onClearHistor
             </div>
             <h3 className="cp-title text-xl font-display font-bold mb-2">Pourquoi c'est utile</h3>
             <p className="cp-muted text-sm leading-relaxed">
-              L'historique local permet de suivre tes nettoyages recents sans exposer ces informations au serveur. Il est stocke dans ton navigateur ou ta PWA.
+              L'historique local permet de suivre tes nettoyages récents sans exposer ces informations au serveur. Il est stocké dans ton navigateur ou dans ta PWA.
             </p>
           </div>
 
           <div className="glass-panel glass-panel-solid rounded-[1.6rem] p-6">
             <p className="cp-label mb-3">Confidentialité</p>
             <ul className="cp-muted text-sm leading-relaxed space-y-2">
-              <li>Les entrees restent sur cet appareil uniquement.</li>
-              <li>Tu peux désactiver l'historique dans l'onglet Infos.</li>
+              <li>Les entrées restent sur cet appareil uniquement.</li>
+              <li>Tu peux désactiver l'historique dans l'onglet Réglages.</li>
               <li>Tu peux aussi vider la liste à tout moment.</li>
             </ul>
           </div>
