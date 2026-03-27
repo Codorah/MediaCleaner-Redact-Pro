@@ -9,3 +9,5 @@ public/downloads/*.zip
 public/downloads/*.exe
 .env
 .vercel
+__pycache__/
+.tmp/

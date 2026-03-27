@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import zipfile
@@ -8,8 +9,10 @@ from pathlib import Path
 from typing import Callable, Iterable
 from uuid import uuid4
 
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+
 import cv2
-import easyocr
 import fitz
 import numpy as np
 from PIL import Image, ImageOps
@@ -26,6 +29,8 @@ OUTPUT_DIR = BASE_DIR / "output"
 MODEL_DIR = BASE_DIR / ".models" / "easyocr"
 USER_NETWORK_DIR = BASE_DIR / ".models" / "easyocr-user-network"
 TEMP_DIR = BASE_DIR / ".tmp"
+DEFAULT_OCR_MAX_DIMENSION = int(os.getenv("OCR_MAX_DIMENSION", "1280"))
+DEFAULT_PDF_OCR_SCALE = float(os.getenv("PDF_OCR_SCALE", "1.5"))
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"}
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv", ".webm"}
@@ -33,7 +38,8 @@ TEXT_EXTENSIONS = {".txt", ".csv", ".md", ".json", ".xml", ".html", ".rtf"}
 PPTX_MEDIA_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 SUPPORTED_EXTENSIONS = IMAGE_EXTENSIONS | VIDEO_EXTENSIONS | TEXT_EXTENSIONS | {".pdf", ".pptx"}
 
-_OCR_CACHE: dict[tuple[str, ...], easyocr.Reader] = {}
+
+_OCR_CACHE = {}  # Type will be resolved during lazy load
 
 
 class CleanerError(RuntimeError):
@@ -54,6 +60,7 @@ class ProcessingOptions:
     max_video_width: int = 1280
     video_ocr_interval: int = 4
     ocr_languages: tuple[str, ...] = ("fr", "en")
+    ocr_max_dimension: int = DEFAULT_OCR_MAX_DIMENSION
 
 
 @dataclass(slots=True)
@@ -88,7 +95,18 @@ def report(progress_callback: Callable[[str], None] | None, message: str) -> Non
         progress_callback(message)
 
 
-def get_ocr_reader(languages: Iterable[str]) -> easyocr.Reader:
+def get_ocr_reader(languages: Iterable[str]):
+    import easyocr
+
+    try:
+        import torch
+
+        torch.set_num_threads(1)
+        if hasattr(torch, "set_num_interop_threads"):
+            torch.set_num_interop_threads(1)
+    except Exception:
+        pass
+
     key = tuple(languages)
     reader = _OCR_CACHE.get(key)
     if reader is None:
@@ -123,10 +141,40 @@ def normalize_bbox(
 
 def find_text_boxes_bgr(image_bgr: np.ndarray, options: ProcessingOptions) -> list[tuple[int, int, int, int]]:
     reader = get_ocr_reader(options.ocr_languages)
-    rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
-    results = reader.readtext(rgb)
     height, width = image_bgr.shape[:2]
-    return [normalize_bbox(bbox, width, height) for bbox, _text, _score in results]
+    ocr_image = image_bgr
+    scale = min(1.0, options.ocr_max_dimension / max(width, height))
+    if scale < 1.0:
+        resized_width = max(1, int(width * scale))
+        resized_height = max(1, int(height * scale))
+        ocr_image = cv2.resize(image_bgr, (resized_width, resized_height), interpolation=cv2.INTER_AREA)
+
+    rgb = cv2.cvtColor(ocr_image, cv2.COLOR_BGR2RGB)
+    try:
+        results = reader.readtext(rgb)
+    except MemoryError as exc:
+        raise CleanerError("Memoire insuffisante pour le caviardage OCR. Reduisez le fichier ou desactivez le masquage du texte.") from exc
+    except RuntimeError as exc:
+        lowered = str(exc).lower()
+        if "memory" in lowered or "allocator" in lowered:
+            raise CleanerError("Memoire insuffisante pour le caviardage OCR. Reduisez le fichier ou desactivez le masquage du texte.") from exc
+        raise CleanerError("Le moteur OCR n'a pas pu analyser ce fichier.") from exc
+
+    target_height, target_width = ocr_image.shape[:2]
+    boxes = [normalize_bbox(bbox, target_width, target_height) for bbox, _text, _score in results]
+    if scale == 1.0:
+        return boxes
+
+    inverse_scale = 1.0 / scale
+    return [
+        (
+            max(0, int(left * inverse_scale)),
+            max(0, int(top * inverse_scale)),
+            min(width, int(right * inverse_scale)),
+            min(height, int(bottom * inverse_scale)),
+        )
+        for left, top, right, bottom in boxes
+    ]
 
 
 def fill_boxes(image_bgr: np.ndarray, boxes: Iterable[tuple[int, int, int, int]]) -> None:
@@ -207,7 +255,7 @@ def collect_pdf_native_rects(page: fitz.Page) -> list[fitz.Rect]:
 
 
 def collect_pdf_ocr_rects(page: fitz.Page, options: ProcessingOptions) -> list[fitz.Rect]:
-    matrix = fitz.Matrix(2.0, 2.0)
+    matrix = fitz.Matrix(DEFAULT_PDF_OCR_SCALE, DEFAULT_PDF_OCR_SCALE)
     pixmap = page.get_pixmap(matrix=matrix, alpha=False)
     image = np.frombuffer(pixmap.samples, dtype=np.uint8).reshape(pixmap.height, pixmap.width, pixmap.n)
     if pixmap.n == 4:

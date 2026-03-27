@@ -5,7 +5,7 @@ import { UploadCloud, File } from 'lucide-react';
 import clsx from 'clsx';
 
 export default function DragDropZone({ onFileSelect, selectedFile }) {
-    const onDrop = useCallback(acceptedFiles => {
+    const onDrop = useCallback((acceptedFiles) => {
         if (acceptedFiles.length > 0) {
             onFileSelect(acceptedFiles[0]);
         }
@@ -25,9 +25,12 @@ export default function DragDropZone({ onFileSelect, selectedFile }) {
             >
                 <File className="w-16 h-16 text-primary mb-4" />
                 <h3 className="text-xl font-display font-bold text-white mb-2 text-center">{selectedFile.name}</h3>
-                <p className="text-text-soft text-sm">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                <p className="text-gray-400 text-sm">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
                 <button
-                    onClick={(e) => { e.stopPropagation(); onFileSelect(null); }}
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        onFileSelect(null);
+                    }}
                     className="mt-6 px-4 py-2 rounded-full border border-white/10 text-sm hover:bg-white/5 transition-colors"
                 >
                     Changer de fichier
@@ -46,7 +49,8 @@ export default function DragDropZone({ onFileSelect, selectedFile }) {
         >
             <input {...getInputProps()} />
 
-            <div className="absolute inset-0 pointer-events-none rounded-3xl"
+            <div
+                className="absolute inset-0 pointer-events-none rounded-3xl"
                 style={{
                     boxShadow: isDragActive ? "inset 0 0 50px rgba(255, 59, 92, 0.2)" : "none"
                 }}
@@ -61,10 +65,10 @@ export default function DragDropZone({ onFileSelect, selectedFile }) {
                 </div>
 
                 <h3 className="text-2xl font-display font-bold text-white mb-3 text-center">
-                    {isDragActive ? "Lâche le fichier ici..." : "Glisse ton fichier ici"}
+                    {isDragActive ? "Depose le fichier ici" : "Glisse ton fichier ici"}
                 </h3>
                 <p className="text-gray-400 text-center max-w-sm">
-                    ou clique pour parcourir tes documents. Supporte images, PDF, PPTX, vidéos et TXT.
+                    ou clique pour parcourir tes documents. Images, PDF, PPTX, videos et fichiers texte sont pris en charge.
                 </p>
             </motion.div>
         </div>

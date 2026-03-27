@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import DragDropZone from "../components/DragDropZone";
 import OptionsPanel from "../components/OptionsPanel";
 import ProcessingAnimation from "../components/ProcessingAnimation";
@@ -17,7 +17,7 @@ const steps = [
     { id: "upload", label: "Fichier" },
     { id: "options", label: "Options" },
     { id: "process", label: "Traitement" },
-    { id: "result", label: "Résultat" }
+    { id: "result", label: "Resultat" }
 ];
 
 function getFilenameFromDisposition(disposition) {
@@ -31,14 +31,14 @@ export default function RedactTab() {
     const [file, setFile] = useState(null);
     const [preset, setPreset] = useState("medium");
     const [options, setOptions] = useState(initialOptions);
-
-    const [status, setStatus] = useState("Prêt.");
+    const [status, setStatus] = useState("Pret.");
     const [progress, setProgress] = useState(0);
     const [result, setResult] = useState(null);
     const [downloadState, setDownloadState] = useState({ url: "", filename: "" });
 
     async function startProcessing() {
         if (!file) return;
+
         setStepIndex(2);
         setStatus("Analyse et nettoyage en cours...");
         setProgress(10);
@@ -55,13 +55,24 @@ export default function RedactTab() {
                 formData.append(key, String(value));
             });
 
-            const API_URL = import.meta.env.VITE_API_URL || "";
-            const response = await fetch(`${API_URL}/api/process`, {
+            const apiUrl = import.meta.env.VITE_API_URL || "";
+            const response = await fetch(`${apiUrl}/api/process`, {
                 method: "POST",
                 body: formData
             });
 
-            if (!response.ok) throw new Error("Erreur serveur lors du traitement.");
+            let errorMessage = "Erreur serveur lors du traitement.";
+            if (!response.ok) {
+                try {
+                    const errorPayload = await response.json();
+                    if (typeof errorPayload?.detail === "string" && errorPayload.detail.trim()) {
+                        errorMessage = errorPayload.detail;
+                    }
+                } catch {
+                    // Fallback to the default message when the backend returns plain text or no body.
+                }
+                throw new Error(errorMessage);
+            }
 
             const blob = await response.blob();
             const filename = getFilenameFromDisposition(response.headers.get("content-disposition")) || `CLEANED_${file.name}`;
@@ -78,12 +89,10 @@ export default function RedactTab() {
             setDownloadState({ url: downloadUrl, filename });
             setResult(nextResult);
             setProgress(100);
-            setStatus("Terminé !");
-
+            setStatus("Termine.");
             setTimeout(() => setStepIndex(3), 600);
-
         } catch (error) {
-            setStatus(error.message);
+            setStatus(error.message || "Traitement impossible.");
             setProgress(0);
             setStepIndex(1);
         } finally {
@@ -104,12 +113,11 @@ export default function RedactTab() {
     };
 
     const handleDownload = () => {
-        if (downloadState.url) {
-            const link = document.createElement("a");
-            link.href = downloadState.url;
-            link.download = downloadState.filename;
-            link.click();
-        }
+        if (!downloadState.url) return;
+        const link = document.createElement("a");
+        link.href = downloadState.url;
+        link.download = downloadState.filename;
+        link.click();
     };
 
     const handleReset = () => {
@@ -117,11 +125,10 @@ export default function RedactTab() {
         setFile(null);
         setResult(null);
         setProgress(0);
+        setStatus("Pret.");
     };
 
-    const nextLabel = stepIndex === 0 ? "Options" :
-        stepIndex === 1 ? "Nettoyer" :
-            stepIndex === 2 ? "..." : "Nouveau Fichier";
+    const nextLabel = stepIndex === 0 ? "Options" : stepIndex === 1 ? "Nettoyer" : stepIndex === 2 ? "..." : "Nouveau fichier";
 
     return (
         <div className="flex flex-col h-full mt-8">

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shutil
 import sqlite3
 from pathlib import Path
@@ -10,13 +11,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from cleaner import BASE_DIR, CleanerError, ProcessingOptions, TEMP_DIR, clean_file
+from cleaner import BASE_DIR, CleanerError, ProcessingOptions, SUPPORTED_EXTENSIONS, TEMP_DIR, clean_file
 
 
 DB_DIR = BASE_DIR / "data"
 DB_PATH = DB_DIR / "mediacleaner.db"
 FRONTEND_DIST = BASE_DIR / "frontend-dist"
+FRONTEND_DIST_RESOLVED = FRONTEND_DIST.resolve()
 PUBLIC_DOWNLOADS_DIR = BASE_DIR / "public" / "downloads"
+CHUNK_SIZE = 1024 * 1024
+MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(100 * 1024 * 1024)))
+PUBLIC_HISTORY_ENABLED = os.getenv("ENABLE_PUBLIC_HISTORY", "false").lower() in {"1", "true", "yes", "on"}
+DOWNLOAD_URL = os.getenv("PUBLIC_DOWNLOAD_URL", "/api/downloads/file")
+DEFAULT_ALLOWED_ORIGINS = "http://127.0.0.1:5173,http://localhost:5173"
+ALLOWED_ORIGINS = [origin.strip() for origin in os.getenv("ALLOWED_ORIGINS", DEFAULT_ALLOWED_ORIGINS).split(",") if origin.strip()]
 
 app = FastAPI(
     title="MediaCleaner Redact Pro",
@@ -26,9 +34,9 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Autorise toutes les origines pour le déploiement
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=ALLOWED_ORIGINS or ["http://127.0.0.1:5173"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -121,6 +129,22 @@ def cleanup_directory(path: Path) -> None:
     shutil.rmtree(path, ignore_errors=True)
 
 
+def client_safe_error(exc: Exception) -> str:
+    lowered = str(exc).lower()
+    if "memory" in lowered or "allocator" in lowered:
+        return "Memoire insuffisante pour traiter ce fichier avec les options actuelles."
+    return "Traitement impossible pour ce fichier."
+
+
+def resolve_frontend_file(full_path: str) -> Path | None:
+    candidate = (FRONTEND_DIST / full_path).resolve()
+    try:
+        candidate.relative_to(FRONTEND_DIST_RESOLVED)
+    except ValueError:
+        return None
+    return candidate
+
+
 def get_desktop_exe() -> Path | None:
     PUBLIC_DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
     zip_files = sorted(PUBLIC_DOWNLOADS_DIR.glob("*.zip"))
@@ -142,15 +166,20 @@ def health() -> JSONResponse:
 
 @app.get("/api/version")
 def get_version() -> JSONResponse:
-    return JSONResponse({
-        "version": "2.0.0",
-        "stable": True,
-        "download_url": "https://ton-app.vercel.app/downloads"
-    })
+    return JSONResponse(
+        {
+            "version": "2.0.0",
+            "stable": True,
+            "download_url": DOWNLOAD_URL,
+        }
+    )
 
 
 @app.get("/api/jobs")
 def recent_jobs(limit: int = 8) -> JSONResponse:
+    if not PUBLIC_HISTORY_ENABLED:
+        raise HTTPException(status_code=404, detail="Historique indisponible sur cette instance.")
+
     with db_connection() as connection:
         rows = connection.execute(
             """
@@ -161,6 +190,7 @@ def recent_jobs(limit: int = 8) -> JSONResponse:
             """,
             (max(1, min(limit, 30)),),
         ).fetchall()
+
     return JSONResponse(
         {
             "jobs": [
@@ -189,7 +219,7 @@ def desktop_download() -> JSONResponse:
                 "filename": file_path.name,
                 "url": "/api/downloads/file",
                 "size_bytes": file_path.stat().st_size,
-                "note": "Telechargement direct actif pour la version desktop."
+                "note": "Telechargement direct actif pour la version desktop.",
             }
         )
 
@@ -199,7 +229,7 @@ def desktop_download() -> JSONResponse:
             "filename": "",
             "url": "",
             "size_bytes": 0,
-            "note": "Aucun .zip ou .exe n'est encore depose dans public/downloads."
+            "note": "Aucun .zip ou .exe n'est encore depose dans public/downloads.",
         }
     )
 
@@ -232,15 +262,27 @@ async def process_file(
     request_dir.mkdir(parents=True, exist_ok=True)
 
     upload_name = Path(file.filename).name
+    upload_suffix = Path(upload_name).suffix.lower()
+    if upload_suffix not in SUPPORTED_EXTENSIONS:
+        cleanup_directory(request_dir)
+        raise HTTPException(status_code=400, detail="Format non supporte.")
+
     upload_path = request_dir / upload_name
     job_id: int | None = None
+    total_bytes = 0
 
     try:
         with upload_path.open("wb") as buffer:
             while True:
-                chunk = await file.read(1024 * 1024)
+                chunk = await file.read(CHUNK_SIZE)
                 if not chunk:
                     break
+                total_bytes += len(chunk)
+                if total_bytes > MAX_UPLOAD_BYTES:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"Fichier trop volumineux. Limite actuelle: {MAX_UPLOAD_BYTES // (1024 * 1024)} MB.",
+                    )
                 buffer.write(chunk)
 
         options = ProcessingOptions(
@@ -250,7 +292,7 @@ async def process_file(
             remove_audio=bool_from_form(remove_audio),
         )
 
-        job_id = log_job_start(upload_name, options, upload_path.stat().st_size)
+        job_id = log_job_start(upload_name, options, total_bytes)
 
         result = clean_file(
             str(upload_path),
@@ -263,10 +305,14 @@ async def process_file(
         log_job_failure(job_id, str(exc))
         cleanup_directory(request_dir)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except HTTPException:
+        log_job_failure(job_id, "Requete refusee.")
+        cleanup_directory(request_dir)
+        raise
     except Exception as exc:
         log_job_failure(job_id, str(exc))
         cleanup_directory(request_dir)
-        raise HTTPException(status_code=500, detail=f"Traitement impossible: {exc}") from exc
+        raise HTTPException(status_code=500, detail=client_safe_error(exc)) from exc
     finally:
         await file.close()
 
@@ -296,8 +342,8 @@ if FRONTEND_DIST.exists():
     @app.get("/", include_in_schema=False, response_model=None)
     @app.get("/{full_path:path}", include_in_schema=False, response_model=None)
     def frontend(full_path: str = ""):
-        target = FRONTEND_DIST / full_path
-        if full_path and target.exists() and target.is_file():
+        target = resolve_frontend_file(full_path) if full_path else None
+        if target is not None and target.exists() and target.is_file():
             return FileResponse(target)
         index_file = FRONTEND_DIST / "index.html"
         if index_file.exists():
@@ -311,7 +357,7 @@ else:
     @app.get("/{full_path:path}", include_in_schema=False, response_model=None)
     def frontend_unavailable(full_path: str = ""):
         return JSONResponse(
-            {"message": "L'interface React n'a pas été construite sur le serveur. Sur Render, assurez-vous que le champ 'Build Command' est bien './build.sh' (et non pip install...). Le déploiement est peut-être encore en cours !"},
+            {"message": "L'interface React n'a pas encore ete construite sur ce serveur."},
             status_code=503,
         )
 
@@ -319,4 +365,4 @@ else:
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("server:app", host="0.0.0.0", port=int(os.getenv("PORT", "8000")), reload=True)

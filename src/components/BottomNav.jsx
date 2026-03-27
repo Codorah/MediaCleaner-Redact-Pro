@@ -4,10 +4,10 @@ import clsx from 'clsx';
 
 export default function BottomNav({ currentTab, onTabChange }) {
     const tabs = [
-        { id: 'home', label: 'Home', icon: Home },
-        { id: 'redact', label: 'Redact', icon: ShieldAlert },
-        { id: 'history', label: 'History', icon: History },
-        { id: 'settings', label: 'Settings', icon: Settings }
+        { id: 'home', label: 'Accueil', icon: Home },
+        { id: 'redact', label: 'Nettoyer', icon: ShieldAlert },
+        { id: 'history', label: 'Suivi', icon: History },
+        { id: 'settings', label: 'Infos', icon: Settings }
     ];
 
     return (
@@ -27,15 +27,17 @@ export default function BottomNav({ currentTab, onTabChange }) {
                                     y: isActive ? -4 : 0,
                                     color: isActive ? '#FF3B5C' : '#9CA3AF'
                                 }}
-                                className={clsx("transition-colors")}
+                                className="transition-colors"
                             >
                                 <Icon className={clsx("w-6 h-6", isActive ? "text-primary" : "text-gray-400")} />
                             </motion.div>
 
-                            <span className={clsx(
-                                "text-[10px] font-medium transition-colors duration-300",
-                                isActive ? "text-primary" : "text-gray-500"
-                            )}>
+                            <span
+                                className={clsx(
+                                    "text-xs font-medium transition-colors duration-300",
+                                    isActive ? "text-primary" : "text-gray-500"
+                                )}
+                            >
                                 {tab.label}
                             </span>
 

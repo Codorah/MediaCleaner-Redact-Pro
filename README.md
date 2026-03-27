@@ -1,3 +1,13 @@
+---
+title: MediaCleaner Redact Pro
+emoji: "🛡️"
+colorFrom: red
+colorTo: green
+sdk: docker
+app_port: 7860
+fullWidth: true
+---
+
 # MediaCleaner Redact Pro
 
 Architecture actuelle:
