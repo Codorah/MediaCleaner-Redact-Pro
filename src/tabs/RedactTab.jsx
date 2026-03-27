@@ -52,6 +52,9 @@ export default function RedactTab({ historyEnabled, onAddHistoryEntry }) {
   const [file, setFile] = useState(null);
   const [preset, setPreset] = useState("medium");
   const [options, setOptions] = useState(presetOptions.medium);
+  const [inspection, setInspection] = useState(null);
+  const [inspectionLoading, setInspectionLoading] = useState(false);
+  const [inspectionError, setInspectionError] = useState("");
   const [status, setStatus] = useState("Prêt.");
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState(null);
@@ -62,6 +65,71 @@ export default function RedactTab({ historyEnabled, onAddHistoryEntry }) {
       setOptions(presetOptions[preset] || initialOptions);
     }
   }, [preset]);
+
+  useEffect(() => {
+    if (!file) {
+      setInspection(null);
+      setInspectionError("");
+      setInspectionLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const controller = new AbortController();
+
+    async function inspectSelectedFile() {
+      setInspectionLoading(true);
+      setInspectionError("");
+
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const apiUrl = import.meta.env.VITE_API_URL || "";
+        const response = await fetch(`${apiUrl}/api/inspect`, {
+          method: "POST",
+          body: formData,
+          signal: controller.signal,
+        });
+
+        let errorMessage = "Impossible d'analyser les métadonnées.";
+        if (!response.ok) {
+          try {
+            const errorPayload = await response.json();
+            if (typeof errorPayload?.detail === "string" && errorPayload.detail.trim()) {
+              errorMessage = errorPayload.detail;
+            }
+          } catch {
+            // Keep the default error message if the backend did not return JSON.
+          }
+          throw new Error(errorMessage);
+        }
+
+        const payload = await response.json();
+        if (!cancelled) {
+          setInspection(payload);
+        }
+      } catch (error) {
+        if (error.name === "AbortError") {
+          return;
+        }
+        if (!cancelled) {
+          setInspection(null);
+          setInspectionError(error.message || "Impossible d'analyser les métadonnées.");
+        }
+      } finally {
+        if (!cancelled) {
+          setInspectionLoading(false);
+        }
+      }
+    }
+
+    inspectSelectedFile();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [file]);
 
   async function startProcessing() {
     if (!file) return;
@@ -164,6 +232,9 @@ export default function RedactTab({ historyEnabled, onAddHistoryEntry }) {
   const handleReset = () => {
     setStepIndex(0);
     setFile(null);
+    setInspection(null);
+    setInspectionError("");
+    setInspectionLoading(false);
     setResult(null);
     setProgress(0);
     setStatus("Prêt.");
@@ -205,6 +276,9 @@ export default function RedactTab({ historyEnabled, onAddHistoryEntry }) {
               key="options"
               options={options}
               preset={preset}
+              inspection={inspection}
+              inspectionLoading={inspectionLoading}
+              inspectionError={inspectionError}
               onPresetChange={handlePresetChange}
               onOptionToggle={handleOptionToggle}
             />

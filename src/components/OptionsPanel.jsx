@@ -16,7 +16,10 @@ const presetDescriptions = {
   custom: "Configuration libre, à ajuster selon ton besoin.",
 };
 
-export default function OptionsPanel({ options, preset, onPresetChange, onOptionToggle }) {
+export default function OptionsPanel({ options, preset, inspection, inspectionLoading, inspectionError, onPresetChange, onOptionToggle }) {
+  const visibleEntries = inspection?.entries?.slice(0, 8) || [];
+  const remainingCount = Math.max(0, (inspection?.entries?.length || 0) - visibleEntries.length);
+
   const OptionItem = ({ icon: Icon, title, description, id, checked }) => (
     <button
       type="button"
@@ -74,6 +77,50 @@ export default function OptionsPanel({ options, preset, onPresetChange, onOption
       <div className="glass-panel rounded-[1.5rem] px-5 py-4 flex items-start gap-3">
         <Sparkles className="w-5 h-5 text-primary mt-0.5" />
         <p className="cp-soft text-sm leading-relaxed">{presetDescriptions[preset]}</p>
+      </div>
+
+      <div className="glass-panel glass-panel-solid rounded-[1.6rem] p-5 md:p-6 space-y-4">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <p className="cp-label mb-2">Analyse préalable</p>
+            <h3 className="cp-title text-2xl font-display font-bold">Métadonnées détectées avant nettoyage</h3>
+          </div>
+          {inspection && <div className="cp-pill text-xs">{inspection.detected_count} élément(s) détecté(s)</div>}
+        </div>
+
+        {inspectionLoading && <p className="cp-muted text-sm">Analyse des métadonnées en cours...</p>}
+        {inspectionError && <p className="cp-warning rounded-[1.2rem] px-4 py-3 text-sm">{inspectionError}</p>}
+
+        {!inspectionLoading && !inspectionError && inspection && visibleEntries.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {visibleEntries.map((entry, index) => (
+              <div key={`${entry.label}-${index}`} className="cp-info-strip rounded-[1.2rem] p-4">
+                <p className="cp-title font-semibold mb-1">{entry.label}</p>
+                <p className="cp-muted text-sm leading-relaxed break-words">{entry.value}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!inspectionLoading && !inspectionError && inspection && visibleEntries.length === 0 && (
+          <div className="cp-info-strip rounded-[1.2rem] p-4">
+            <p className="cp-muted text-sm leading-relaxed">
+              Aucune métadonnée sensible évidente n&apos;a été trouvée pour ce fichier dans l&apos;analyse actuelle.
+            </p>
+          </div>
+        )}
+
+        {!inspectionLoading && !inspectionError && inspection?.notes?.length > 0 && (
+          <div className="space-y-2">
+            {inspection.notes.map((note, index) => (
+              <p key={`${note}-${index}`} className="cp-muted text-sm leading-relaxed">
+                {note}
+              </p>
+            ))}
+          </div>
+        )}
+
+        {remainingCount > 0 && <p className="cp-muted text-sm">+ {remainingCount} autre(s) élément(s) détecté(s).</p>}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

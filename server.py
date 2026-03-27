@@ -19,7 +19,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from cleaner import BASE_DIR, CleanerError, ProcessingOptions, SUPPORTED_EXTENSIONS, TEMP_DIR, clean_file
+from cleaner import BASE_DIR, CleanerError, ProcessingOptions, SUPPORTED_EXTENSIONS, TEMP_DIR, clean_file, inspect_file_metadata
 
 
 APP_NAME = "Cleaner Pro"
@@ -435,6 +435,63 @@ def desktop_download_file(request: Request):
         media_type="application/octet-stream",
         filename=file_path.name,
     )
+
+
+@app.post("/api/inspect")
+async def inspect_metadata(request: Request, file: UploadFile = File(...)) -> JSONResponse:
+    enforce_rate_limit(request, "inspect", RATE_LIMIT_PROCESS_REQUESTS)
+
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Nom de fichier manquant.")
+
+    request_dir = TEMP_DIR / "web" / uuid4().hex
+    request_dir.mkdir(parents=True, exist_ok=True)
+
+    upload_name = Path(file.filename).name
+    upload_suffix = Path(upload_name).suffix.lower()
+    if upload_suffix not in SUPPORTED_EXTENSIONS:
+        cleanup_directory(request_dir)
+        raise HTTPException(status_code=400, detail="Format non supporté pour l'analyse.")
+
+    allowed_content_types = ALLOWED_CONTENT_TYPES.get(upload_suffix, {"application/octet-stream"})
+    if file.content_type and file.content_type not in allowed_content_types:
+        cleanup_directory(request_dir)
+        raise HTTPException(status_code=400, detail="Type MIME non autorisé pour cette extension.")
+
+    upload_path = request_dir / upload_name
+    total_bytes = 0
+
+    try:
+        with upload_path.open("wb") as buffer:
+            while True:
+                chunk = await file.read(CHUNK_SIZE)
+                if not chunk:
+                    break
+                total_bytes += len(chunk)
+                if total_bytes > MAX_UPLOAD_BYTES:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"Fichier trop volumineux. Limite actuelle: {MAX_UPLOAD_BYTES // (1024 * 1024)} MB.",
+                    )
+                buffer.write(chunk)
+
+        scan_uploaded_file(upload_path)
+        payload = inspect_file_metadata(str(upload_path))
+        payload.update({"filename": upload_name, "size_bytes": total_bytes})
+        security_event("inspection_succeeded", filename=upload_name, ip=client_ip(request), detected=payload.get("detected_count", 0))
+        return JSONResponse(payload)
+    except CleanerError as exc:
+        security_event("inspection_failed", filename=upload_name, ip=client_ip(request), reason=str(exc)[:250])
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except HTTPException:
+        security_event("inspection_rejected", filename=upload_name, ip=client_ip(request))
+        raise
+    except Exception as exc:
+        security_event("inspection_error", filename=upload_name, ip=client_ip(request), reason=str(exc)[:250])
+        raise HTTPException(status_code=500, detail=client_safe_error(exc)) from exc
+    finally:
+        await file.close()
+        cleanup_directory(request_dir)
 
 
 @app.post("/api/process")

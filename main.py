@@ -15,7 +15,7 @@ ctk.set_default_color_theme("blue")
 
 FILETYPES = [
     (
-        "Formats supportes",
+        "Formats supportés",
         "*.jpg *.jpeg *.png *.bmp *.webp *.tif *.tiff *.pdf *.pptx *.mp4 *.mov *.avi *.mkv *.webm *.txt *.csv *.md *.json *.xml *.html *.rtf",
     )
 ]
@@ -53,8 +53,8 @@ class CleanerProApp(ctk.CTk):
         ctk.CTkLabel(
             header,
             text=(
-                "Redaction visible du texte sur images, PDF, PPTX, videos et documents texte. "
-                "Nettoyage des metadonnees et compression de sortie quand possible."
+                "Traitement local des images, PDF, présentations, vidéos et documents texte. "
+                "Nettoyage des métadonnées, compression et retrait audio quand c'est utile."
             ),
             wraplength=860,
             justify="left",
@@ -69,8 +69,8 @@ class CleanerProApp(ctk.CTk):
         top_actions.pack(fill="x", padx=18, pady=(18, 10))
 
         ctk.CTkButton(top_actions, text="Choisir des fichiers", command=self.select_files, width=220, height=42).pack(side="left")
-        ctk.CTkButton(top_actions, text="Vider la selection", command=self.clear_selection, width=180, height=42).pack(side="left", padx=(12, 0))
-        ctk.CTkButton(top_actions, text="Ouvrir le dossier output", command=self.open_output_folder, width=220, height=42).pack(side="right")
+        ctk.CTkButton(top_actions, text="Vider la sélection", command=self.clear_selection, width=180, height=42).pack(side="left", padx=(12, 0))
+        ctk.CTkButton(top_actions, text="Ouvrir le dossier de sortie", command=self.open_output_folder, width=220, height=42).pack(side="right")
 
         options_frame = ctk.CTkFrame(controls, fg_color="transparent")
         options_frame.pack(fill="x", padx=18, pady=(0, 16))
@@ -84,7 +84,7 @@ class CleanerProApp(ctk.CTk):
         ).grid(row=0, column=0, padx=(0, 18), pady=8, sticky="w")
         ctk.CTkSwitch(
             options_frame,
-            text="Supprimer les metadonnees",
+            text="Supprimer les métadonnées",
             variable=self.strip_metadata_var,
             onvalue=True,
             offvalue=False,
@@ -98,7 +98,7 @@ class CleanerProApp(ctk.CTk):
         ).grid(row=1, column=0, padx=(0, 18), pady=8, sticky="w")
         ctk.CTkSwitch(
             options_frame,
-            text="Supprimer l'audio des videos",
+            text="Supprimer l'audio des vidéos",
             variable=self.remove_audio_var,
             onvalue=True,
             offvalue=False,
@@ -109,13 +109,13 @@ class CleanerProApp(ctk.CTk):
 
         ctk.CTkLabel(
             selection_frame,
-            text="Fichiers selectionnes",
+            text="Fichiers sélectionnés",
             font=ctk.CTkFont(size=18, weight="bold"),
         ).pack(anchor="w", padx=18, pady=(16, 10))
 
         self.file_summary = ctk.CTkLabel(
             selection_frame,
-            text="Aucun fichier selectionne",
+            text="Aucun fichier sélectionné",
             justify="left",
             text_color="#a9b4c2",
             wraplength=860,
@@ -124,7 +124,7 @@ class CleanerProApp(ctk.CTk):
 
         self.process_button = ctk.CTkButton(
             selection_frame,
-            text="Lancer la redaction",
+            text="Lancer le traitement",
             command=self.start_processing,
             width=220,
             height=44,
@@ -143,13 +143,13 @@ class CleanerProApp(ctk.CTk):
 
         ctk.CTkLabel(
             log_frame,
-            text="Journal d'execution",
+            text="Journal d'exécution",
             font=ctk.CTkFont(size=18, weight="bold"),
         ).pack(anchor="w", padx=18, pady=(16, 10))
 
         self.log_box = ctk.CTkTextbox(log_frame, corner_radius=12)
         self.log_box.pack(fill="both", expand=True, padx=18, pady=(0, 18))
-        self.log_box.insert("end", "Pret.\n")
+        self.log_box.insert("end", "Prêt.\n")
         self.log_box.configure(state="disabled")
 
     def log(self, message: str) -> None:
@@ -168,17 +168,17 @@ class CleanerProApp(ctk.CTk):
         self.selected_files = files
         self.update_file_summary()
         self.process_button.configure(state="normal")
-        self.log(f"{len(files)} fichier(s) selectionne(s).")
+        self.log(f"{len(files)} fichier(s) sélectionné(s).")
 
     def clear_selection(self) -> None:
         self.selected_files = []
         self.update_file_summary()
         self.process_button.configure(state="disabled")
-        self.log("Selection videe.")
+        self.log("Sélection vidée.")
 
     def update_file_summary(self) -> None:
         if not self.selected_files:
-            self.file_summary.configure(text="Aucun fichier selectionne")
+            self.file_summary.configure(text="Aucun fichier sélectionné")
             return
 
         preview = [f"- {Path(path).name}" for path in self.selected_files[:8]]
@@ -203,17 +203,17 @@ class CleanerProApp(ctk.CTk):
 
     def start_processing(self) -> None:
         if not self.selected_files:
-            messagebox.showwarning("Aucun fichier", "Selectionne au moins un fichier.")
+            messagebox.showwarning("Aucun fichier", "Sélectionne au moins un fichier.")
             return
 
         if self.worker_thread and self.worker_thread.is_alive():
-            messagebox.showinfo("Traitement en cours", "Un traitement est deja en cours.")
+            messagebox.showinfo("Traitement en cours", "Un traitement est déjà en cours.")
             return
 
         options = self.build_options()
         files = list(self.selected_files)
         self.set_busy(True)
-        self.log("Demarrage du traitement.")
+        self.log("Démarrage du traitement.")
         self.worker_thread = threading.Thread(target=self.process_files_worker, args=(files, options), daemon=True)
         self.worker_thread.start()
 

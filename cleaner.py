@@ -4,6 +4,7 @@ import os
 import shutil
 import subprocess
 import zipfile
+from importlib import import_module
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Iterable
@@ -16,12 +17,8 @@ import cv2
 import fitz
 import numpy as np
 from PIL import Image, ImageOps
+from PIL.ExifTags import GPSTAGS, TAGS
 from pptx import Presentation
-
-try:
-    import imageio_ffmpeg
-except ImportError:  # pragma: no cover
-    imageio_ffmpeg = None
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -37,6 +34,40 @@ VIDEO_EXTENSIONS = {".mp4", ".mov", ".avi", ".mkv", ".webm"}
 TEXT_EXTENSIONS = {".txt", ".csv", ".md", ".json", ".xml", ".html", ".rtf"}
 PPTX_MEDIA_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 SUPPORTED_EXTENSIONS = IMAGE_EXTENSIONS | VIDEO_EXTENSIONS | TEXT_EXTENSIONS | {".pdf", ".pptx"}
+
+IMAGE_METADATA_LABELS = {
+    "Artist": "Auteur",
+    "Copyright": "Copyright",
+    "DateTime": "Dernière modification",
+    "DateTimeOriginal": "Date de prise de vue",
+    "HostComputer": "Ordinateur hôte",
+    "ImageDescription": "Description",
+    "Make": "Marque de l'appareil",
+    "Model": "Modèle de l'appareil",
+    "Software": "Logiciel",
+}
+PDF_METADATA_LABELS = {
+    "title": "Titre",
+    "author": "Auteur",
+    "subject": "Sujet",
+    "keywords": "Mots-clés",
+    "creator": "Application source",
+    "producer": "Producteur PDF",
+    "creationDate": "Date de création",
+    "modDate": "Date de modification",
+}
+PPTX_METADATA_LABELS = {
+    "author": "Auteur",
+    "title": "Titre",
+    "subject": "Sujet",
+    "category": "Catégorie",
+    "keywords": "Mots-clés",
+    "comments": "Commentaires",
+    "last_modified_by": "Dernière modification par",
+    "language": "Langue",
+    "created": "Date de création",
+    "modified": "Date de modification",
+}
 
 
 _OCR_CACHE = {}  # Type will be resolved during lazy load
@@ -78,6 +109,151 @@ class ProcessResult:
         return (1 - (self.output_bytes / self.original_bytes)) * 100
 
 
+def stringify_metadata_value(value: object) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        try:
+            value = value.decode("utf-8", errors="ignore")
+        except Exception:
+            return ""
+    if isinstance(value, (list, tuple)):
+        parts = [stringify_metadata_value(part) for part in value]
+        return ", ".join([part for part in parts if part])
+    if hasattr(value, "isoformat"):
+        try:
+            return value.isoformat(sep=" ", timespec="seconds")
+        except TypeError:
+            return value.isoformat()
+    text = str(value).strip()
+    return text if text and text.lower() != "none" else ""
+
+
+def append_metadata_entry(entries: list[dict[str, str]], label: str, value: object, category: str = "Métadonnée") -> None:
+    rendered = stringify_metadata_value(value)
+    if rendered:
+        entries.append({"label": label, "value": rendered, "category": category})
+
+
+def gps_coordinate_to_decimal(raw_value: object, ref: object) -> float | None:
+    if not isinstance(raw_value, (list, tuple)) or len(raw_value) < 3:
+        return None
+    try:
+        degrees = float(raw_value[0])
+        minutes = float(raw_value[1])
+        seconds = float(raw_value[2])
+    except Exception:
+        return None
+    decimal = degrees + (minutes / 60.0) + (seconds / 3600.0)
+    if str(ref).upper() in {"S", "W"}:
+        decimal *= -1
+    return decimal
+
+
+def inspect_image_metadata(input_path: str) -> tuple[list[dict[str, str]], list[str]]:
+    entries: list[dict[str, str]] = []
+    notes: list[str] = []
+    with Image.open(input_path) as source_image:
+        exif = source_image.getexif()
+        if not exif:
+            notes.append("Aucune donnée EXIF riche détectée dans cette image.")
+            return entries, notes
+
+        for tag_id, raw_value in exif.items():
+            tag_name = TAGS.get(tag_id, str(tag_id))
+            if tag_name == "GPSInfo" and isinstance(raw_value, dict):
+                gps_info = {GPSTAGS.get(key, str(key)): value for key, value in raw_value.items()}
+                latitude = gps_coordinate_to_decimal(gps_info.get("GPSLatitude"), gps_info.get("GPSLatitudeRef"))
+                longitude = gps_coordinate_to_decimal(gps_info.get("GPSLongitude"), gps_info.get("GPSLongitudeRef"))
+                if latitude is not None and longitude is not None:
+                    append_metadata_entry(entries, "Localisation GPS", f"{latitude:.5f}, {longitude:.5f}", "Géolocalisation")
+                continue
+
+            label = IMAGE_METADATA_LABELS.get(tag_name)
+            if label:
+                append_metadata_entry(entries, label, raw_value)
+
+    if not entries:
+        notes.append("Des informations techniques existent peut-être, mais aucune métadonnée sensible courante n'a été relevée.")
+    return entries, notes
+
+
+def inspect_pdf_metadata(input_path: str) -> tuple[list[dict[str, str]], list[str]]:
+    entries: list[dict[str, str]] = []
+    notes: list[str] = []
+    with fitz.open(input_path) as document:
+        metadata = document.metadata or {}
+        for key, label in PDF_METADATA_LABELS.items():
+            append_metadata_entry(entries, label, metadata.get(key))
+        if document.page_count:
+            append_metadata_entry(entries, "Nombre de pages", document.page_count, "Technique")
+    if not entries:
+        notes.append("Aucune métadonnée PDF explicite n'a été détectée.")
+    return entries, notes
+
+
+def inspect_pptx_metadata(input_path: str) -> tuple[list[dict[str, str]], list[str]]:
+    entries: list[dict[str, str]] = []
+    notes: list[str] = []
+    presentation = Presentation(input_path)
+    core = presentation.core_properties
+    for attribute, label in PPTX_METADATA_LABELS.items():
+        append_metadata_entry(entries, label, getattr(core, attribute, None))
+    if not entries:
+        notes.append("Aucune propriété Office sensible n'a été détectée dans cette présentation.")
+    return entries, notes
+
+
+def inspect_video_metadata(input_path: str) -> tuple[list[dict[str, str]], list[str]]:
+    entries: list[dict[str, str]] = []
+    notes: list[str] = []
+    capture = cv2.VideoCapture(input_path)
+    if capture.isOpened():
+        width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+        height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+        fps = float(capture.get(cv2.CAP_PROP_FPS) or 0.0)
+        frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+        if width and height:
+            append_metadata_entry(entries, "Résolution", f"{width} x {height}", "Technique")
+        if fps:
+            append_metadata_entry(entries, "Images par seconde", f"{fps:.2f}", "Technique")
+        if frame_count and fps:
+            append_metadata_entry(entries, "Durée estimée", f"{frame_count / fps:.1f} s", "Technique")
+    capture.release()
+    notes.append("L'analyse détaillée des métadonnées vidéo pourra être enrichie ensuite avec ffprobe.")
+    return entries, notes
+
+
+def inspect_file_metadata(input_path: str) -> dict[str, object]:
+    suffix = Path(input_path).suffix.lower()
+    entries: list[dict[str, str]]
+    notes: list[str]
+
+    if suffix in IMAGE_EXTENSIONS:
+        entries, notes = inspect_image_metadata(input_path)
+        file_type = "image"
+    elif suffix == ".pdf":
+        entries, notes = inspect_pdf_metadata(input_path)
+        file_type = "pdf"
+    elif suffix == ".pptx":
+        entries, notes = inspect_pptx_metadata(input_path)
+        file_type = "pptx"
+    elif suffix in VIDEO_EXTENSIONS:
+        entries, notes = inspect_video_metadata(input_path)
+        file_type = "video"
+    else:
+        entries = []
+        notes = ["Ce type de document contient peu de métadonnées riches exploitables dans l'interface actuelle."]
+        file_type = "document"
+
+    return {
+        "file_type": file_type,
+        "detected_count": len(entries),
+        "entries": entries,
+        "notes": notes,
+    }
+
+
 def get_output_dir() -> Path:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     return OUTPUT_DIR
@@ -96,10 +272,13 @@ def report(progress_callback: Callable[[str], None] | None, message: str) -> Non
 
 
 def get_ocr_reader(languages: Iterable[str]):
-    import easyocr
+    try:
+        easyocr = import_module("easyocr")
+    except ImportError as exc:
+        raise CleanerError("Le module OCR n'est pas disponible dans cette edition desktop.") from exc
 
     try:
-        import torch
+        torch = import_module("torch")
 
         torch.set_num_threads(1)
         if hasattr(torch, "set_num_interop_threads"):
@@ -183,11 +362,11 @@ def fill_boxes(image_bgr: np.ndarray, boxes: Iterable[tuple[int, int, int, int]]
 
 
 def get_ffmpeg_executable() -> str | None:
-    if imageio_ffmpeg is not None:
-        try:
-            return imageio_ffmpeg.get_ffmpeg_exe()
-        except Exception:
-            pass
+    try:
+        imageio_ffmpeg = import_module("imageio_ffmpeg")
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        pass
     return shutil.which("ffmpeg")
 
 
