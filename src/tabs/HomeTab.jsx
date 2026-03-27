@@ -222,7 +222,7 @@ export default function HomeTab({ onStart }) {
               </div>
               <h2 className="cp-title text-3xl font-display font-bold">Version bureau</h2>
               <p className="cp-soft leading-relaxed">
-                Quand le binaire Windows sera prêt, cette instance pourra proposer un téléchargement direct de Cleaner Pro.
+                Télécharge la version Windows portable de Cleaner Pro pour traiter tes fichiers en local, sur ton propre poste.
               </p>
               <p className="cp-muted text-sm">{desktopDownload.note}</p>
               {desktopDownload.filename && (
@@ -238,13 +238,12 @@ export default function HomeTab({ onStart }) {
                 <div className="flex items-start gap-3">
                   <LockKeyhole className="w-5 h-5 text-primary mt-1" />
                   <div>
-                    <p className="cp-title font-semibold">Distribution contrôlée</p>
+                    <p className="cp-title font-semibold">Traitement local</p>
                     <p className="cp-muted text-sm leading-relaxed">
-                      Le site ne sert que ce que tu configures explicitement. Aucun binaire n'est exposé tant qu'il n'est pas fourni.
+                      La version bureau est pensée pour garder le traitement sur ta machine, sans dépendre de l'interface web.
                     </p>
                   </div>
                 </div>
-
                 {desktopDownload.available ? (
                   <a
                     href={desktopDownload.url || "/api/downloads/file"}
@@ -253,7 +252,7 @@ export default function HomeTab({ onStart }) {
                     className="cp-action-primary w-full"
                   >
                     <Download className="w-5 h-5" />
-                    Télécharger la version desktop
+                    Télécharger Cleaner Pro
                   </a>
                 ) : (
                   <div className="cp-warning rounded-[1.2rem] px-4 py-4 text-sm">

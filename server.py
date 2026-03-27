@@ -89,7 +89,7 @@ ALLOWED_CONTENT_TYPES = {
 
 app = FastAPI(
     title=APP_NAME,
-    description="API pour nettoyer les metadonnees, alleger les fichiers et masquer le texte visible a la demande.",
+    description="API pour nettoyer les métadonnées, alléger les fichiers et masquer le texte visible à la demande.",
     version="2.0.0",
 )
 
@@ -320,7 +320,7 @@ def desktop_download_payload() -> dict[str, object]:
             "filename": DESKTOP_DOWNLOAD_FILENAME or Path(DESKTOP_DOWNLOAD_EXTERNAL_URL).name or "Cleaner-Pro-Desktop",
             "url": DESKTOP_DOWNLOAD_EXTERNAL_URL,
             "size_bytes": 0,
-            "note": DESKTOP_DOWNLOAD_NOTE or "Telechargement desktop disponible.",
+            "note": DESKTOP_DOWNLOAD_NOTE or "Téléchargement desktop disponible.",
             "external": True,
         }
 
@@ -331,7 +331,7 @@ def desktop_download_payload() -> dict[str, object]:
             "filename": file_path.name,
             "url": "/api/downloads/file",
             "size_bytes": file_path.stat().st_size,
-            "note": DESKTOP_DOWNLOAD_NOTE or "Telechargement direct actif pour la version desktop.",
+            "note": DESKTOP_DOWNLOAD_NOTE or "Téléchargement direct actif pour la version desktop.",
             "external": False,
         }
 
@@ -340,7 +340,7 @@ def desktop_download_payload() -> dict[str, object]:
         "filename": "",
         "url": "",
         "size_bytes": 0,
-        "note": "Aucun .zip ou .exe n'est encore depose dans public/downloads et aucune URL externe n'est configuree.",
+        "note": "Aucun .zip ou .exe n'est encore déposé dans public/downloads et aucune URL externe n'est configurée.",
         "external": False,
     }
 
@@ -425,10 +425,10 @@ def desktop_download() -> JSONResponse:
 def desktop_download_file(request: Request):
     enforce_rate_limit(request, "downloads", RATE_LIMIT_DOWNLOAD_REQUESTS)
     if DESKTOP_DOWNLOAD_EXTERNAL_URL:
-        raise HTTPException(status_code=404, detail="Le telechargement desktop est configure via une URL externe.")
+        raise HTTPException(status_code=404, detail="Le téléchargement desktop est configuré via une URL externe.")
     file_path = get_desktop_exe()
     if file_path is None:
-        raise HTTPException(status_code=404, detail="Aucun .exe disponible pour le telechargement.")
+        raise HTTPException(status_code=404, detail="Aucun fichier desktop disponible pour le téléchargement.")
     security_event("desktop_download", filename=file_path.name, ip=client_ip(request))
     return FileResponse(
         file_path,

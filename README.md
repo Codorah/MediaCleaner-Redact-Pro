@@ -22,6 +22,7 @@ Architecture actuelle:
 - allege les fichiers quand c'est possible
 - masque le texte visible en option sur images, PDF et videos
 - conserve le texte des slides PowerPoint
+- affiche les métadonnées détectées avant nettoyage pour rendre l'analyse plus lisible
 
 ## Lancer le frontend React
 
@@ -65,25 +66,31 @@ npm run build
 
 Le build React sort dans `frontend-dist/`. Si ce dossier existe, `server.py` peut le servir directement.
 
-## Telechargement desktop
+## Téléchargement desktop
 
-Si tu veux afficher un bouton de telechargement desktop dans le site, tu as deux options:
+Le projet peut afficher un bouton de téléchargement desktop dans le site de deux façons:
 
-1. deposer un `.zip` ou un `.exe` dans `public/downloads/`
+1. déposer un `.zip` ou un `.exe` dans `public/downloads/`
 2. ou configurer une URL externe via `DESKTOP_DOWNLOAD_EXTERNAL_URL`
 
 ### Option 1: fichier local servi par l'application
 
-1. depose ton fichier dans `public/downloads/`
+1. dépose ton fichier dans `public/downloads/`
 2. rebuild le frontend avec `npm run build`
 
 Exemple attendu:
 
 ```text
-public/downloads/Cleaner_Pro.exe
+public/downloads/Cleaner_Pro_Portable.zip
 ```
 
-Le site detectera automatiquement le `.exe` ou le `.zip` et activera la section de telechargement desktop.
+Le site détectera automatiquement le `.exe` ou le `.zip` et activera la section de téléchargement desktop.
+
+Le dépôt contient maintenant un package portable Windows prêt à servir:
+
+```text
+public/downloads/Cleaner_Pro_Portable.zip
+```
 
 ### Option 2: lien externe vers le binaire
 
@@ -92,7 +99,7 @@ Configure les variables suivantes sur ton hebergeur:
 ```text
 DESKTOP_DOWNLOAD_EXTERNAL_URL=https://.../Cleaner_Pro.exe
 DESKTOP_DOWNLOAD_FILENAME=Cleaner_Pro.exe
-DESKTOP_DOWNLOAD_NOTE=Telechargement officiel de la version desktop.
+DESKTOP_DOWNLOAD_NOTE=Téléchargement officiel de la version desktop.
 ```
 
 Cette approche est recommandee si tu veux pointer vers GitHub Releases ou un stockage de fichiers dedie.
@@ -125,6 +132,7 @@ Si tu veux une posture encore plus stricte, la meilleure approche reste l'usage 
 
 - `GET /api/health`
 - `GET /api/jobs`
+- `POST /api/inspect`
 - `POST /api/process`
 
 ## Notes
