@@ -76,7 +76,7 @@ export default function HomeTab({ onStart }) {
                     </h1>
 
                     <p className="text-xl text-gray-400 leading-relaxed font-medium">
-                        MediaCleaner Redact Pro retire les metadonnees sensibles, optimise la taille des fichiers
+                        Cleaner Pro retire les metadonnees sensibles, optimise la taille des fichiers
                         et peut masquer le texte visible selon le niveau de protection souhaite.
                     </p>
 
@@ -132,7 +132,7 @@ export default function HomeTab({ onStart }) {
                         {desktopDownload.filename && (
                             <p className="text-sm text-gray-400">
                                 Fichier detecte: <span className="text-white font-medium">{desktopDownload.filename}</span>
-                                {desktopDownload.size_bytes ? ` · ${formatBytes(desktopDownload.size_bytes)}` : ""}
+                                {desktopDownload.size_bytes ? ` - ${formatBytes(desktopDownload.size_bytes)}` : ""}
                             </p>
                         )}
                     </div>
@@ -205,7 +205,7 @@ export default function HomeTab({ onStart }) {
             >
                 <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-[80px]" />
 
-                <h2 className="text-3xl font-display font-bold text-white mb-6">A propos de MediaCleaner Redact Pro</h2>
+                <h2 className="text-3xl font-display font-bold text-white mb-6">A propos de Cleaner Pro</h2>
 
                 <div className="space-y-6 text-gray-300 text-lg leading-relaxed max-w-4xl relative z-10">
                     <p>
@@ -213,7 +213,7 @@ export default function HomeTab({ onStart }) {
                         peuvent reveler l'auteur, la date, le logiciel utilise ou la localisation.
                     </p>
                     <p>
-                        <strong className="text-white">MediaCleaner Redact Pro</strong> aide a reduire cette exposition
+                        <strong className="text-white">Cleaner Pro</strong> aide a reduire cette exposition
                         en supprimant les traces inutiles et en proposant un mode OCR pour masquer le texte visible
                         lorsque le niveau de confidentialite l'exige.
                     </p>

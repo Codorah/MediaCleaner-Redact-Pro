@@ -1,12 +1,13 @@
 {
-  "name": "mediacleaner-redact-pro-web",
+  "name": "cleaner-pro-web",
   "private": true,
   "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite --configLoader runner",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "postinstall": "node scripts/patch-vite-windows.js"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",

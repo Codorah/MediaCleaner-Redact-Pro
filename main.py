@@ -21,10 +21,10 @@ FILETYPES = [
 ]
 
 
-class MediaCleanerRedactApp(ctk.CTk):
+class CleanerProApp(ctk.CTk):
     def __init__(self) -> None:
         super().__init__()
-        self.title("MediaCleaner Redact Pro")
+        self.title("Cleaner Pro")
         self.geometry("980x760")
         self.minsize(920, 700)
 
@@ -47,7 +47,7 @@ class MediaCleanerRedactApp(ctk.CTk):
 
         ctk.CTkLabel(
             header,
-            text="MediaCleaner Redact Pro",
+            text="Cleaner Pro",
             font=ctk.CTkFont(size=30, weight="bold"),
         ).pack(anchor="w")
         ctk.CTkLabel(
@@ -181,7 +181,7 @@ class MediaCleanerRedactApp(ctk.CTk):
             self.file_summary.configure(text="Aucun fichier selectionne")
             return
 
-        preview = [f"• {Path(path).name}" for path in self.selected_files[:8]]
+        preview = [f"- {Path(path).name}" for path in self.selected_files[:8]]
         suffix = "" if len(self.selected_files) <= 8 else f"\n... et {len(self.selected_files) - 8} autre(s)"
         self.file_summary.configure(text="\n".join(preview) + suffix)
 
@@ -273,5 +273,5 @@ class MediaCleanerRedactApp(ctk.CTk):
 
 
 if __name__ == "__main__":
-    app = MediaCleanerRedactApp()
+    app = CleanerProApp()
     app.mainloop()

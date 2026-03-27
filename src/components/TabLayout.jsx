@@ -23,7 +23,7 @@ export default function TabLayout({ children, currentTab, onTabChange }) {
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
                         <ShieldAlert className="w-6 h-6 text-white" />
                     </div>
-                    <h1 className="font-display font-bold text-lg text-white">MediaCleaner Redact Pro</h1>
+                    <h1 className="font-display font-bold text-lg text-white">Cleaner Pro</h1>
                 </div>
 
                 <nav className="flex gap-2 bg-white/5 p-1 rounded-2xl border border-white/10">

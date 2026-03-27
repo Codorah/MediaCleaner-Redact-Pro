@@ -10,7 +10,7 @@ export default function SettingsTab() {
 
     const handleSend = (event) => {
         event.preventDefault();
-        const subject = `Contact depuis MediaCleaner par ${contactForm.name}`;
+        const subject = `Contact depuis Cleaner Pro par ${contactForm.name}`;
         const body = `${contactForm.message}\n\nDe : ${contactForm.name} (${contactForm.email})`;
         window.location.href = `mailto:codorah@hotmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         setFormSent(true);
@@ -33,6 +33,11 @@ export default function SettingsTab() {
                     <strong>Vie privee :</strong> l'application est pensee pour limiter au maximum l'exposition de tes
                     fichiers. Sur le web, les traitements passent par l'instance que tu deploies. En local, les
                     sorties et l'historique restent sur ton poste tant que tu ne les supprimes pas.
+                </p>
+                <p className="text-gray-400 text-sm mb-4 leading-relaxed">
+                    <strong>Protection active :</strong> chaque upload passe dans un dossier temporaire isole, avec
+                    limitation par IP, journaux de securite et possibilite d'activer un antivirus cote serveur sans
+                    imposer de compte utilisateur.
                 </p>
 
                 <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10 mt-6">
@@ -79,6 +84,13 @@ export default function SettingsTab() {
                         <p className="text-sm text-gray-400 mt-3 pl-2 border-l-2 border-primary leading-relaxed">
                             Le service peut supprimer les metadonnees, reduire la taille des medias et, selon l'option
                             choisie, masquer le texte visible sur certaines categories de fichiers.
+                        </p>
+                    </details>
+                    <details className="bg-white/5 p-4 rounded-xl border border-white/10 cursor-pointer group">
+                        <summary className="font-medium text-white select-none">Quelles protections sont actives sur le site ?</summary>
+                        <p className="text-sm text-gray-400 mt-3 pl-2 border-l-2 border-primary leading-relaxed">
+                            Le service applique des limites par IP, isole les traitements dans des dossiers temporaires,
+                            ajoute des en-tetes HTTP de securite et peut brancher un scanner antivirus sur les uploads.
                         </p>
                     </details>
                     <details className="bg-white/5 p-4 rounded-xl border border-white/10 cursor-pointer group">
@@ -135,7 +147,7 @@ export default function SettingsTab() {
 
             <div className="text-center pb-6">
                 <p className="text-gray-600 text-xs text-center inline-block bg-white/5 px-4 py-2 rounded-full border border-white/5">
-                    © 2026 MediaCleaner Redact Pro v2.0.0. Developpe par Codorah.
+                    (c) 2026 Cleaner Pro v2.0.0. Developpe par Codorah.
                 </p>
             </div>
         </motion.div>

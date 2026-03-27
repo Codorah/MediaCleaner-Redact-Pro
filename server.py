@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import ipaddress
+import logging
 import os
+import shlex
 import shutil
 import sqlite3
+import subprocess
 import time
 from collections import defaultdict, deque
 from pathlib import Path
@@ -18,11 +22,13 @@ from fastapi.staticfiles import StaticFiles
 from cleaner import BASE_DIR, CleanerError, ProcessingOptions, SUPPORTED_EXTENSIONS, TEMP_DIR, clean_file
 
 
+APP_NAME = "Cleaner Pro"
 DB_DIR = BASE_DIR / "data"
 DB_PATH = DB_DIR / "mediacleaner.db"
 FRONTEND_DIST = BASE_DIR / "frontend-dist"
 FRONTEND_DIST_RESOLVED = FRONTEND_DIST.resolve()
 PUBLIC_DOWNLOADS_DIR = BASE_DIR / "public" / "downloads"
+SECURITY_LOG_PATH = Path(os.getenv("SECURITY_LOG_PATH", str(DB_DIR / "security.log")))
 CHUNK_SIZE = 1024 * 1024
 MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(100 * 1024 * 1024)))
 PUBLIC_HISTORY_ENABLED = os.getenv("ENABLE_PUBLIC_HISTORY", "false").lower() in {"1", "true", "yes", "on"}
@@ -40,6 +46,11 @@ RATE_LIMIT_WINDOW_SECONDS = max(10, int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "
 RATE_LIMIT_PROCESS_REQUESTS = max(1, int(os.getenv("RATE_LIMIT_PROCESS_REQUESTS", "12")))
 RATE_LIMIT_DOWNLOAD_REQUESTS = max(1, int(os.getenv("RATE_LIMIT_DOWNLOAD_REQUESTS", "40")))
 RATE_LIMIT_BUCKETS: dict[str, deque[float]] = defaultdict(deque)
+SECURITY_LOG_ENABLED = os.getenv("SECURITY_LOG_ENABLED", "true").lower() in {"1", "true", "yes", "on"}
+MALWARE_SCANNER_PATH = os.getenv("MALWARE_SCANNER_PATH", "").strip()
+MALWARE_SCANNER_ARGS = os.getenv("MALWARE_SCANNER_ARGS", "--no-summary").strip()
+MALWARE_SCAN_TIMEOUT_SECONDS = max(5, int(os.getenv("MALWARE_SCAN_TIMEOUT_SECONDS", "60")))
+STALE_TEMP_MAX_AGE_SECONDS = max(300, int(os.getenv("STALE_TEMP_MAX_AGE_SECONDS", str(24 * 3600))))
 DEFAULT_CSP = (
     "default-src 'self'; "
     "img-src 'self' data: blob:; "
@@ -76,7 +87,7 @@ ALLOWED_CONTENT_TYPES = {
 }
 
 app = FastAPI(
-    title="MediaCleaner Redact Pro",
+    title=APP_NAME,
     description="API pour nettoyer les metadonnees, alleger les fichiers et masquer le texte visible a la demande.",
     version="2.0.0",
 )
@@ -88,7 +99,16 @@ app.add_middleware(
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS or ["127.0.0.1", "localhost", ".onrender.com"])
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS or ["127.0.0.1", "localhost", "*.onrender.com"])
+
+security_logger = logging.getLogger("cleaner_pro.security")
+if SECURITY_LOG_ENABLED and not security_logger.handlers:
+    DB_DIR.mkdir(parents=True, exist_ok=True)
+    handler = logging.FileHandler(SECURITY_LOG_PATH, encoding="utf-8")
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+    security_logger.addHandler(handler)
+    security_logger.setLevel(logging.INFO)
+    security_logger.propagate = False
 
 
 def db_connection() -> sqlite3.Connection:
@@ -179,12 +199,28 @@ def cleanup_directory(path: Path) -> None:
     shutil.rmtree(path, ignore_errors=True)
 
 
+def security_event(event: str, **fields: object) -> None:
+    if not SECURITY_LOG_ENABLED:
+        return
+    payload = " ".join(f"{key}={fields[key]!r}" for key in sorted(fields))
+    security_logger.info("%s %s", event, payload)
+
+
 def client_ip(request: Request) -> str:
-    forwarded_for = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-    if forwarded_for:
-        return forwarded_for
-    if request.client and request.client.host:
-        return request.client.host
+    client_host = request.client.host if request.client and request.client.host else ""
+    if client_host:
+        try:
+            parsed = ipaddress.ip_address(client_host)
+            if parsed.is_private or parsed.is_loopback or parsed.is_link_local:
+                forwarded_for = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+                if forwarded_for:
+                    return forwarded_for
+        except ValueError:
+            if client_host in {"localhost", "testclient"}:
+                forwarded_for = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+                if forwarded_for:
+                    return forwarded_for
+        return client_host
     return "unknown"
 
 
@@ -195,6 +231,7 @@ def enforce_rate_limit(request: Request, action: str, limit: int) -> None:
     while bucket and now - bucket[0] > RATE_LIMIT_WINDOW_SECONDS:
         bucket.popleft()
     if len(bucket) >= limit:
+        security_event("rate_limit", action=action, ip=client_ip(request), limit=limit)
         raise HTTPException(
             status_code=429,
             detail="Trop de requetes sur une courte periode. Merci de reessayer un peu plus tard.",
@@ -227,11 +264,55 @@ def get_desktop_exe() -> Path | None:
     return exe_files[0] if exe_files else None
 
 
+def cleanup_stale_temp_dirs() -> None:
+    temp_root = TEMP_DIR / "web"
+    if not temp_root.exists():
+        return
+    now = time.time()
+    for path in temp_root.iterdir():
+        try:
+            if not path.is_dir():
+                continue
+            if now - path.stat().st_mtime > STALE_TEMP_MAX_AGE_SECONDS:
+                cleanup_directory(path)
+        except OSError:
+            continue
+
+
+def scan_uploaded_file(upload_path: Path) -> None:
+    if not MALWARE_SCANNER_PATH:
+        return
+
+    args = shlex.split(MALWARE_SCANNER_ARGS, posix=False) if MALWARE_SCANNER_ARGS else []
+    command = [MALWARE_SCANNER_PATH, *args, str(upload_path)]
+    try:
+        completed = subprocess.run(command, capture_output=True, text=True, timeout=MALWARE_SCAN_TIMEOUT_SECONDS)
+    except subprocess.TimeoutExpired as exc:
+        security_event("malware_scan_timeout", file=upload_path.name, timeout=MALWARE_SCAN_TIMEOUT_SECONDS)
+        raise HTTPException(status_code=503, detail="Le scanner de securite a expire avant la fin de l'analyse.") from exc
+    except FileNotFoundError as exc:
+        security_event("malware_scan_unavailable", file=upload_path.name, reason="missing_executable")
+        raise HTTPException(status_code=503, detail="Le scanner de securite n'est pas disponible sur cette instance.") from exc
+    except OSError as exc:
+        security_event("malware_scan_unavailable", file=upload_path.name, reason=str(exc)[:250])
+        raise HTTPException(status_code=503, detail="Le scanner de securite n'a pas pu etre lance.") from exc
+
+    if completed.returncode == 0:
+        security_event("malware_scan_clean", file=upload_path.name)
+        return
+    if completed.returncode == 1:
+        security_event("malware_scan_blocked", file=upload_path.name, stdout=completed.stdout[:300], stderr=completed.stderr[:300])
+        raise HTTPException(status_code=400, detail="Le fichier a ete bloque par le scanner de securite.")
+
+    security_event("malware_scan_error", file=upload_path.name, code=completed.returncode, stderr=completed.stderr[:300])
+    raise HTTPException(status_code=503, detail="Le scanner de securite est indisponible pour le moment.")
+
+
 def desktop_download_payload() -> dict[str, object]:
     if DESKTOP_DOWNLOAD_EXTERNAL_URL:
         return {
             "available": True,
-            "filename": DESKTOP_DOWNLOAD_FILENAME or Path(DESKTOP_DOWNLOAD_EXTERNAL_URL).name or "MediaCleaner-Desktop",
+            "filename": DESKTOP_DOWNLOAD_FILENAME or Path(DESKTOP_DOWNLOAD_EXTERNAL_URL).name or "Cleaner-Pro-Desktop",
             "url": DESKTOP_DOWNLOAD_EXTERNAL_URL,
             "size_bytes": 0,
             "note": DESKTOP_DOWNLOAD_NOTE or "Telechargement desktop disponible.",
@@ -262,6 +343,7 @@ def desktop_download_payload() -> dict[str, object]:
 @app.on_event("startup")
 def on_startup() -> None:
     init_db()
+    cleanup_stale_temp_dirs()
 
 
 @app.middleware("http")
@@ -290,6 +372,7 @@ def get_version() -> JSONResponse:
             "version": "2.0.0",
             "stable": True,
             "download_url": DOWNLOAD_URL,
+            "name": APP_NAME,
         }
     )
 
@@ -341,6 +424,7 @@ def desktop_download_file(request: Request):
     file_path = get_desktop_exe()
     if file_path is None:
         raise HTTPException(status_code=404, detail="Aucun .exe disponible pour le telechargement.")
+    security_event("desktop_download", filename=file_path.name, ip=client_ip(request))
     return FileResponse(
         file_path,
         media_type="application/octet-stream",
@@ -369,10 +453,12 @@ async def process_file(
     upload_name = Path(file.filename).name
     upload_suffix = Path(upload_name).suffix.lower()
     if upload_suffix not in SUPPORTED_EXTENSIONS:
+        security_event("upload_blocked_extension", filename=upload_name, ip=client_ip(request), extension=upload_suffix)
         cleanup_directory(request_dir)
         raise HTTPException(status_code=400, detail="Format non supporte.")
     allowed_content_types = ALLOWED_CONTENT_TYPES.get(upload_suffix, {"application/octet-stream"})
     if file.content_type and file.content_type not in allowed_content_types:
+        security_event("upload_blocked_mime", filename=upload_name, ip=client_ip(request), content_type=file.content_type)
         cleanup_directory(request_dir)
         raise HTTPException(status_code=400, detail="Type MIME non autorise pour cette extension.")
 
@@ -388,11 +474,14 @@ async def process_file(
                     break
                 total_bytes += len(chunk)
                 if total_bytes > MAX_UPLOAD_BYTES:
+                    security_event("upload_blocked_size", filename=upload_name, ip=client_ip(request), size=total_bytes)
                     raise HTTPException(
                         status_code=413,
                         detail=f"Fichier trop volumineux. Limite actuelle: {MAX_UPLOAD_BYTES // (1024 * 1024)} MB.",
                     )
                 buffer.write(chunk)
+
+        scan_uploaded_file(upload_path)
 
         options = ProcessingOptions(
             strip_metadata=bool_from_form(strip_metadata),
@@ -402,6 +491,7 @@ async def process_file(
         )
 
         job_id = log_job_start(upload_name, options, total_bytes)
+        security_event("processing_started", filename=upload_name, ip=client_ip(request), size=total_bytes)
 
         async with PROCESSING_SEMAPHORE:
             result = clean_file(
@@ -411,15 +501,19 @@ async def process_file(
                 prefix="CLEANED",
             )
         log_job_success(job_id, result.output_bytes, result.reduction_percent)
+        security_event("processing_succeeded", filename=upload_name, ip=client_ip(request), output_bytes=result.output_bytes)
     except CleanerError as exc:
+        security_event("processing_failed", filename=upload_name, ip=client_ip(request), reason=str(exc)[:250])
         log_job_failure(job_id, str(exc))
         cleanup_directory(request_dir)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except HTTPException:
+        security_event("processing_rejected", filename=upload_name, ip=client_ip(request))
         log_job_failure(job_id, "Requete refusee.")
         cleanup_directory(request_dir)
         raise
     except Exception as exc:
+        security_event("processing_error", filename=upload_name, ip=client_ip(request), reason=str(exc)[:250])
         log_job_failure(job_id, str(exc))
         cleanup_directory(request_dir)
         raise HTTPException(status_code=500, detail=client_safe_error(exc)) from exc

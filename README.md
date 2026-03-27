@@ -1,5 +1,5 @@
 ---
-title: MediaCleaner Redact Pro
+title: Cleaner Pro
 emoji: "🛡️"
 colorFrom: red
 colorTo: green
@@ -8,7 +8,7 @@ app_port: 7860
 fullWidth: true
 ---
 
-# MediaCleaner Redact Pro
+# Cleaner Pro
 
 Architecture actuelle:
 
@@ -35,6 +35,14 @@ Frontend dev:
 ```text
 http://127.0.0.1:5173
 ```
+
+Si `npm run dev` echoue sur Windows avec `spawn EPERM`, relance d'abord:
+
+```bash
+npm install
+```
+
+Le projet applique ensuite automatiquement un patch Vite via `postinstall` pour contourner le bug Windows lie a `net use`.
 
 ## Lancer le backend Python
 
@@ -72,7 +80,7 @@ Si tu veux afficher un bouton de telechargement desktop dans le site, tu as deux
 Exemple attendu:
 
 ```text
-public/downloads/MediaCleaner_Redact_Pro.exe
+public/downloads/Cleaner_Pro.exe
 ```
 
 Le site detectera automatiquement le `.exe` ou le `.zip` et activera la section de telechargement desktop.
@@ -82,12 +90,36 @@ Le site detectera automatiquement le `.exe` ou le `.zip` et activera la section 
 Configure les variables suivantes sur ton hebergeur:
 
 ```text
-DESKTOP_DOWNLOAD_EXTERNAL_URL=https://.../MediaCleaner_Redact_Pro.exe
-DESKTOP_DOWNLOAD_FILENAME=MediaCleaner_Redact_Pro.exe
+DESKTOP_DOWNLOAD_EXTERNAL_URL=https://.../Cleaner_Pro.exe
+DESKTOP_DOWNLOAD_FILENAME=Cleaner_Pro.exe
 DESKTOP_DOWNLOAD_NOTE=Telechargement officiel de la version desktop.
 ```
 
 Cette approche est recommandee si tu veux pointer vers GitHub Releases ou un stockage de fichiers dedie.
+
+## Securite renforcee
+
+Le backend inclut maintenant:
+
+- isolation des uploads dans des repertoires temporaires jetables
+- purge automatique des repertoires temporaires trop anciens
+- validation extension + type MIME
+- limite de taille d'upload
+- rate limiting par IP sur les routes sensibles
+- `TrustedHostMiddleware` et en-tetes HTTP de securite
+- logs de securite dans `data/security.log`
+- hook antivirus optionnel via `MALWARE_SCANNER_PATH`
+
+### Exemple de scan antivirus
+
+Sur une machine avec ClamAV:
+
+```text
+MALWARE_SCANNER_PATH=/usr/bin/clamscan
+MALWARE_SCANNER_ARGS=--no-summary --infected
+```
+
+Si tu veux une posture encore plus stricte, la meilleure approche reste l'usage local ou auto-heberge, avec stockage temporaire ephemere et scanner actif sur l'hote.
 
 ## API utile
 
@@ -102,3 +134,4 @@ Cette approche est recommandee si tu veux pointer vers GitHub Releases ou un sto
 - Le mode `Masquer le texte visible` est plus lent.
 - Sur `.pptx`, le backend optimise les medias embarques et nettoie les metadonnees, mais ne vide plus les slides.
 - Le backend applique des limites d'upload, des en-tetes de securite, une validation MIME de base, un controle d'hote et un rate limiting simple sur les routes sensibles.
+- Pour Render, utilise `ALLOWED_HOSTS=127.0.0.1,localhost,*.onrender.com`.

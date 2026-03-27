@@ -5,8 +5,8 @@
   --color-accent: #00F5A0;
   --color-dark: #0A0A0A;
   --color-card: #111111;
-  --font-sans: 'Inter', sans-serif;
-  --font-display: 'Poppins', sans-serif;
+  --font-sans: "Aptos", "Segoe UI", "Trebuchet MS", sans-serif;
+  --font-display: "Bahnschrift", "Arial Narrow", "Segoe UI", sans-serif;
 }
 
 @layer base {

@@ -11,3 +11,9 @@ public/downloads/*.exe
 .vercel
 __pycache__/
 .tmp/
+.tmp-*.log
+build.log
+build_cmd.log
+build_err*.txt
+debug.log
+src/debug.log

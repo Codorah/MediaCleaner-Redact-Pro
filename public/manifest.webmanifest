@@ -1,6 +1,6 @@
 {
-  "name": "MediaCleaner Redact Pro",
-  "short_name": "MediaCleaner",
+  "name": "Cleaner Pro",
+  "short_name": "Cleaner Pro",
   "description": "Interface React et PWA pour nettoyer les metadonnees, alleger les fichiers et masquer le texte visible en option.",
   "start_url": "/",
   "scope": "/",
