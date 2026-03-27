@@ -1,76 +1,65 @@
-import { motion } from 'framer-motion';
-import { Download, RefreshCcw, Info } from 'lucide-react';
+import { motion } from "framer-motion";
+import { Download, RefreshCcw, Info } from "lucide-react";
 
 function formatBytes(bytes) {
-    if (!bytes) return "0 B";
-    const units = ["B", "KB", "MB", "GB"];
-    let size = bytes;
-    let index = 0;
-    while (size >= 1024 && index < units.length - 1) {
-        size /= 1024;
-        index += 1;
-    }
-    return `${size.toFixed(1)} ${units[index]}`;
+  if (!bytes) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  let size = bytes;
+  let index = 0;
+  while (size >= 1024 && index < units.length - 1) {
+    size /= 1024;
+    index += 1;
+  }
+  return `${size.toFixed(1)} ${units[index]}`;
 }
 
 export default function ResultCard({ result, onDownload, onReset }) {
-    const percentStr = result?.reductionPercent || "0.0";
-    const savings = formatBytes((result?.originalBytes || 0) - (result?.outputBytes || 0));
+  const percentStr = result?.reductionPercent || "0.0";
+  const savings = formatBytes((result?.originalBytes || 0) - (result?.outputBytes || 0));
 
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-2xl mx-auto"
-        >
-            <div className="glass-panel p-8 rounded-3xl mb-8 relative overflow-hidden">
-                <div className="absolute -top-32 -right-32 w-64 h-64 bg-accent/20 blur-[100px] rounded-full pointer-events-none" />
+  return (
+    <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-3xl mx-auto">
+      <div className="glass-panel glass-panel-solid p-8 md:p-10 rounded-[2rem] relative overflow-hidden">
+        <div className="absolute -top-24 -right-16 w-56 h-56 bg-accent/14 blur-[90px] rounded-full pointer-events-none" />
 
-                <h2 className="text-3xl font-display font-bold text-white mb-8">Nettoyage termine</h2>
+        <p className="cp-label mb-3">Resultat</p>
+        <h2 className="cp-title text-4xl font-display font-bold mb-8">Nettoyage termine</h2>
 
-                <div className="grid grid-cols-2 gap-4 mb-8">
-                    <div className="bg-white/5 p-6 rounded-2xl border border-white/10 flex flex-col items-center justify-center">
-                        <span className="text-gray-400 text-sm mb-2">Taille d'origine</span>
-                        <strong className="text-2xl font-display text-white">{formatBytes(result?.originalBytes)}</strong>
-                    </div>
-                    <div className="bg-primary/10 p-6 rounded-2xl border border-primary/30 flex flex-col items-center justify-center relative overflow-hidden">
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.18)_1px,transparent_1px)] bg-[length:16px_16px] opacity-40 pointer-events-none" />
-                        <span className="text-gray-400 text-sm mb-2 relative z-10">Taille optimisee</span>
-                        <strong className="text-3xl font-display text-accent relative z-10">{formatBytes(result?.outputBytes)}</strong>
-                    </div>
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="cp-stat-card flex flex-col gap-2">
+            <span className="cp-muted text-sm">Taille d'origine</span>
+            <strong className="cp-title text-3xl font-display">{formatBytes(result?.originalBytes)}</strong>
+          </div>
+          <div className="cp-stat-card border-primary/20 bg-primary/10 flex flex-col gap-2">
+            <span className="cp-muted text-sm">Taille optimisee</span>
+            <strong className="text-3xl font-display text-accent">{formatBytes(result?.outputBytes)}</strong>
+          </div>
+          <div className="cp-stat-card flex flex-col gap-2">
+            <span className="cp-muted text-sm">Reduction</span>
+            <strong className="cp-title text-3xl font-display">{percentStr}%</strong>
+          </div>
+        </div>
 
-                <div className="flex items-center gap-3 bg-white/5 p-4 rounded-xl border border-white/10 mb-8">
-                    <Info className="text-primary w-5 h-5 flex-shrink-0" />
-                    <p className="text-sm text-gray-300">
-                        Tu as economise <strong className="text-white">{savings}</strong> ({percentStr}% de reduction).
-                        Les metadonnees invisibles ont ete purgees en toute securite.
-                    </p>
-                </div>
+        <div className="cp-info-strip rounded-[1.25rem] p-4 flex items-start gap-3 mb-8">
+          <Info className="text-primary w-5 h-5 flex-shrink-0 mt-0.5" />
+          <p className="cp-soft text-sm leading-relaxed">
+            Tu as economise <strong className="cp-title">{savings}</strong>. Les metadonnees invisibles ont ete traitees en local sur cette session avant telechargement.
+          </p>
+        </div>
 
-                {result?.warnings && (
-                    <p className="text-amber-300 text-sm bg-amber-400/10 p-4 rounded-xl mb-8 border border-amber-400/20">
-                        Notes: {result.warnings}
-                    </p>
-                )}
+        {result?.warnings && <p className="cp-warning rounded-[1.25rem] p-4 text-sm mb-8">Notes: {result.warnings}</p>}
 
-                <div className="flex flex-col sm:flex-row gap-4">
-                    <button
-                        onClick={onDownload}
-                        className="flex-1 bg-primary hover:bg-primary/90 text-white py-4 px-6 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all hover:scale-[1.02] shadow-primary/30 shadow-xl"
-                    >
-                        <Download className="w-5 h-5" />
-                        Telecharger le fichier
-                    </button>
-                    <button
-                        onClick={onReset}
-                        className="sm:w-auto bg-white/5 hover:bg-white/10 text-white py-4 px-6 rounded-2xl font-medium border border-white/10 flex items-center justify-center gap-2 transition-colors"
-                    >
-                        <RefreshCcw className="w-5 h-5" />
-                        Nouveau
-                    </button>
-                </div>
-            </div>
-        </motion.div>
-    );
+        <div className="flex flex-col sm:flex-row gap-4">
+          <button onClick={onDownload} className="cp-action-primary flex-1">
+            <Download className="w-5 h-5" />
+            Telecharger le fichier
+          </button>
+          <button onClick={onReset} className="cp-action-secondary sm:w-auto">
+            <RefreshCcw className="w-5 h-5" />
+            Nouveau
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
 }
