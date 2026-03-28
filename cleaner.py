@@ -188,7 +188,10 @@ def stringify_metadata_value(value: object) -> str:
             except Exception:
                 pass
     text = str(value).strip()
-    return text if text and text.lower() != "none" else ""
+    # Filter out empty or null-like values often returned by FFmpeg/EXIF
+    if not text or text.lower() in {"none", "unknown", "undefined", "[0][0][0][0]", "0x00000000"}:
+        return ""
+    return text
 
 
 def append_metadata_entry(
@@ -302,7 +305,9 @@ def inspect_pdf_metadata(input_path: str) -> tuple[list[dict[str, str]], list[st
                 pass
                 
     if not entries:
-        notes.append("Aucune métadonnée PDF explicite n'a été détectée.")
+        notes.append("🛡️ Analyse Profonde effectuée : Aucune métadonnée sensible (Auteur, Logiciel, Historique) n'a été trouvée dans la structure interne de ce PDF. Le fichier est sain de ce côté.")
+    else:
+        notes.append("✅ Des métadonnées ont été isolées. Celles marquées comme 'Sensitive' seront purgées en priorité.")
     return entries, notes
 
 
@@ -414,7 +419,9 @@ def inspect_video_metadata(input_path: str) -> tuple[list[dict[str, str]], list[
 
     sensitive_entries = [entry for entry in entries if entry.get("risk") == "sensitive"]
     if not sensitive_entries:
-        notes.append("Aucune géolocalisation, identité ou source d'export sensible n'a été trouvée dans cette vidéo. Seules des traces techniques d'encodage ont été relevées.")
+        notes.append("🛡️ Analyse Profonde effectuée : Aucun tag de géolocalisation ou d'identité n'a été détecté dans les flux internes de la vidéo.")
+    else:
+        notes.append("✅ Analyse Profonde terminée : Des traces de logiciels ou d'identité ont été localisées.")
     return entries, notes
 
 

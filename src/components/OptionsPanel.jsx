@@ -127,9 +127,10 @@ export default function OptionsPanel({ options, preset, inspection, inspectionLo
           <button 
             type="button"
             onClick={() => setShowAllMetadata(true)}
-            className="w-full py-3 px-4 border-2 border-dashed border-primary/30 rounded-[1.2rem] text-primary hover:bg-primary/5 transition-colors text-sm font-semibold"
+            className="w-full py-4 px-4 border-2 border-dashed border-primary/30 rounded-[1.2rem] text-primary hover:bg-primary/5 transition-all text-sm font-display font-bold flex items-center justify-center gap-2 group"
           >
-            + {remainingCount} autre(s) élément(s) détecté(s). Voir tout.
+            <span>Afficher les {remainingCount} métadonnées techniques supplémentaires</span>
+            <Sparkles className="w-4 h-4 group-hover:rotate-12 transition-transform" />
           </button>
         )}
         {showAllMetadata && totalCount > 8 && (
