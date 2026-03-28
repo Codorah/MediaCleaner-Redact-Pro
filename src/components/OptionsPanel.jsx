@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Shield, EyeOff, FileText, VolumeX, CheckSquare, Sparkles } from "lucide-react";
 import clsx from "clsx";
@@ -17,8 +18,10 @@ const presetDescriptions = {
 };
 
 export default function OptionsPanel({ options, preset, inspection, inspectionLoading, inspectionError, onPresetChange, onOptionToggle }) {
-  const visibleEntries = inspection?.entries?.slice(0, 8) || [];
-  const remainingCount = Math.max(0, (inspection?.entries?.length || 0) - visibleEntries.length);
+  const [showAllMetadata, setShowAllMetadata] = useState(false);
+  const visibleEntries = showAllMetadata ? (inspection?.entries || []) : (inspection?.entries?.slice(0, 8) || []);
+  const totalCount = inspection?.entries?.length || 0;
+  const remainingCount = Math.max(0, totalCount - visibleEntries.length);
 
   const OptionItem = ({ icon: Icon, title, description, id, checked }) => (
     <button
@@ -120,7 +123,24 @@ export default function OptionsPanel({ options, preset, inspection, inspectionLo
           </div>
         )}
 
-        {remainingCount > 0 && <p className="cp-muted text-sm">+ {remainingCount} autre(s) élément(s) détecté(s).</p>}
+        {remainingCount > 0 && !showAllMetadata && (
+          <button 
+            type="button"
+            onClick={() => setShowAllMetadata(true)}
+            className="w-full py-3 px-4 border-2 border-dashed border-primary/30 rounded-[1.2rem] text-primary hover:bg-primary/5 transition-colors text-sm font-semibold"
+          >
+            + {remainingCount} autre(s) élément(s) détecté(s). Voir tout.
+          </button>
+        )}
+        {showAllMetadata && totalCount > 8 && (
+          <button 
+            type="button"
+            onClick={() => setShowAllMetadata(false)}
+            className="w-full py-2 text-primary/70 hover:text-primary transition-colors text-sm font-medium"
+          >
+            Réduire la liste
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

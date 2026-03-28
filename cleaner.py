@@ -907,11 +907,23 @@ def clean_video(
             shutil.copyfile(processed_video_file, output_path)
             return warnings
 
-        report(progress_callback, "Compression et nettoyage final de la video")
+        report(progress_callback, "Compression et nettoyage final de la video (FFmpeg)")
         command = build_video_ffmpeg_command(ffmpeg_exe, str(processed_video_file), input_path, output_path, options)
-        completed = subprocess.run(command, capture_output=True, text=True)
-        if completed.returncode != 0:
-            raise CleanerError(f"Echec FFmpeg: {completed.stderr.strip() or 'erreur inconnue'}")
+        
+        # Using a timeout and capturing output more defensively
+        try:
+            completed = subprocess.run(
+                command, 
+                capture_output=True, 
+                text=True, 
+                timeout=600 # 10 minute timeout for final assembly
+            )
+            if completed.returncode != 0:
+                stderr_snippet = completed.stderr.strip()[-500:] if completed.stderr else "erreur inconnue"
+                raise CleanerError(f"Echec FFmpeg: {stderr_snippet}")
+        except subprocess.TimeoutExpired:
+            raise CleanerError("Le traitement final de la video (FFmpeg) a depasse le delai de 10 minutes.")
+        
         return warnings
     finally:
         if writer is not None:

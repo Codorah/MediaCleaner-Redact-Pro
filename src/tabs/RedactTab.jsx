@@ -140,8 +140,12 @@ export default function RedactTab({ historyEnabled, onAddHistoryEntry }) {
     setResult(null);
 
     const timer = window.setInterval(() => {
-      setProgress((current) => (current >= 90 ? current : current + Math.random() * 8));
-    }, 400);
+      setProgress((current) => {
+        if (current >= 95) return current;
+        const incr = current < 80 ? Math.random() * 5 : Math.random() * 1.5;
+        return current + incr;
+      });
+    }, 500);
 
     try {
       const formData = new FormData();
