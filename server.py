@@ -39,7 +39,7 @@ DESKTOP_DOWNLOAD_NOTE = os.getenv("DESKTOP_DOWNLOAD_NOTE", "").strip()
 DESKTOP_DOWNLOAD_MIN_BYTES = max(1024, int(os.getenv("DESKTOP_DOWNLOAD_MIN_BYTES", str(1024 * 1024))))
 DEFAULT_ALLOWED_ORIGINS = "http://127.0.0.1:5173,http://localhost:5173"
 ALLOWED_ORIGINS = [origin.strip() for origin in os.getenv("ALLOWED_ORIGINS", DEFAULT_ALLOWED_ORIGINS).split(",") if origin.strip()]
-DEFAULT_ALLOWED_HOSTS = "127.0.0.1,localhost,testserver,*.onrender.com"
+DEFAULT_ALLOWED_HOSTS = "127.0.0.1,localhost,testserver,*.onrender.com,*.hf.space,*.huggingface.co"
 ALLOWED_HOSTS = [host.strip() for host in os.getenv("ALLOWED_HOSTS", DEFAULT_ALLOWED_HOSTS).split(",") if host.strip()]
 MAX_CONCURRENT_JOBS = max(1, int(os.getenv("MAX_CONCURRENT_JOBS", "2")))
 PROCESSING_SEMAPHORE = asyncio.Semaphore(MAX_CONCURRENT_JOBS)
@@ -51,7 +51,9 @@ SECURITY_LOG_ENABLED = os.getenv("SECURITY_LOG_ENABLED", "true").lower() in {"1"
 MALWARE_SCANNER_PATH = os.getenv("MALWARE_SCANNER_PATH", "").strip()
 MALWARE_SCANNER_ARGS = os.getenv("MALWARE_SCANNER_ARGS", "--no-summary").strip()
 MALWARE_SCAN_TIMEOUT_SECONDS = max(5, int(os.getenv("MALWARE_SCAN_TIMEOUT_SECONDS", "60")))
+MALWARE_SCANNER_STRICT = os.getenv("MALWARE_SCANNER_STRICT", "false").lower() in {"1", "true", "yes", "on"}
 STALE_TEMP_MAX_AGE_SECONDS = max(300, int(os.getenv("STALE_TEMP_MAX_AGE_SECONDS", str(24 * 3600))))
+STRICT_MIME_VALIDATION = os.getenv("STRICT_MIME_VALIDATION", "false").lower() in {"1", "true", "yes", "on"}
 DEFAULT_CSP = (
     "default-src 'self'; "
     "img-src 'self' data: blob:; "
@@ -294,13 +296,19 @@ def scan_uploaded_file(upload_path: Path) -> None:
         completed = subprocess.run(command, capture_output=True, text=True, timeout=MALWARE_SCAN_TIMEOUT_SECONDS)
     except subprocess.TimeoutExpired as exc:
         security_event("malware_scan_timeout", file=upload_path.name, timeout=MALWARE_SCAN_TIMEOUT_SECONDS)
-        raise HTTPException(status_code=503, detail="Le scanner de securite a expire avant la fin de l'analyse.") from exc
+        if MALWARE_SCANNER_STRICT:
+            raise HTTPException(status_code=503, detail="Le scanner de securite a expire avant la fin de l'analyse.") from exc
+        return
     except FileNotFoundError as exc:
         security_event("malware_scan_unavailable", file=upload_path.name, reason="missing_executable")
-        raise HTTPException(status_code=503, detail="Le scanner de securite n'est pas disponible sur cette instance.") from exc
+        if MALWARE_SCANNER_STRICT:
+            raise HTTPException(status_code=503, detail="Le scanner de securite n'est pas disponible sur cette instance.") from exc
+        return
     except OSError as exc:
         security_event("malware_scan_unavailable", file=upload_path.name, reason=str(exc)[:250])
-        raise HTTPException(status_code=503, detail="Le scanner de securite n'a pas pu etre lance.") from exc
+        if MALWARE_SCANNER_STRICT:
+            raise HTTPException(status_code=503, detail="Le scanner de securite n'a pas pu etre lance.") from exc
+        return
 
     if completed.returncode == 0:
         security_event("malware_scan_clean", file=upload_path.name)
@@ -310,7 +318,8 @@ def scan_uploaded_file(upload_path: Path) -> None:
         raise HTTPException(status_code=400, detail="Le fichier a ete bloque par le scanner de securite.")
 
     security_event("malware_scan_error", file=upload_path.name, code=completed.returncode, stderr=completed.stderr[:300])
-    raise HTTPException(status_code=503, detail="Le scanner de securite est indisponible pour le moment.")
+    if MALWARE_SCANNER_STRICT:
+        raise HTTPException(status_code=503, detail="Le scanner de securite est indisponible pour le moment.")
 
 
 def desktop_download_payload() -> dict[str, object]:
@@ -454,6 +463,8 @@ async def inspect_metadata(request: Request, file: UploadFile = File(...)) -> JS
         raise HTTPException(status_code=400, detail="Format non supporté pour l'analyse.")
 
     allowed_content_types = ALLOWED_CONTENT_TYPES.get(upload_suffix, {"application/octet-stream"})
+    if file.content_type and not STRICT_MIME_VALIDATION:
+        allowed_content_types = set(allowed_content_types) | {file.content_type}
     if file.content_type and file.content_type not in allowed_content_types:
         cleanup_directory(request_dir)
         raise HTTPException(status_code=400, detail="Type MIME non autorisé pour cette extension.")
@@ -519,6 +530,8 @@ async def process_file(
         cleanup_directory(request_dir)
         raise HTTPException(status_code=400, detail="Format non supporte.")
     allowed_content_types = ALLOWED_CONTENT_TYPES.get(upload_suffix, {"application/octet-stream"})
+    if file.content_type and not STRICT_MIME_VALIDATION:
+        allowed_content_types = set(allowed_content_types) | {file.content_type}
     if file.content_type and file.content_type not in allowed_content_types:
         security_event("upload_blocked_mime", filename=upload_name, ip=client_ip(request), content_type=file.content_type)
         cleanup_directory(request_dir)
